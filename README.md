@@ -6,3 +6,7 @@
 
 # Project sử dụng Frame-work PyTorch Lightning
 https://pytorch-lightning.readthedocs.io/en/latest/index.html?fbclid=IwAR3QeExQW_3NhdRZggdaFJSHn87eAmdAnzBAF2wdlmqn-1hCujKpvGjatXY
+
+# Sử dụng toán tử, cấu trúc search của NasGep
+- Nasgep: https://arxiv.org/pdf/2005.07669.pdf
+- SepConv: https://viblo.asia/p/separable-convolutions-toward-realtime-object-detection-applications-aWj534bpK6m

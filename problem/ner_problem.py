@@ -33,72 +33,8 @@ class NERProblem(Problem):
     
     #-------------------------------------
     # Glove embedding
-    def load_glove(self, glove_dir):
-        embeddings_index = {} # empty dictionary
-        f = open(glove_dir, encoding="utf-8")
 
-        for line in f:
-            values = line.split()
-            word = values[0]
-            coefs = np.asarray(values[1:], dtype='float32')
-            embeddings_index[word] = coefs
-        f.close()
-        print('Found %s word vectors.' % len(embeddings_index))
 
-        # tf_vocab = tf.constant(vocabulary)
-        # ids = lookup_layer(tf_vocab)
-        # for token,i in enumerate(vocabulary) : 
-        ids_to_glove = {}
-        unk_embed = [ -0.12920076, -0.28866628, -0.01224866, -0.05676644, -0.20210965, 
-                    -0.08389011,  0.33359843,  0.16045167,  0.03867431,  0.17833012,  0.04696583, 
-                    -0.00285802,  0.29099807,  0.04613704, -0.20923874, -0.06613114, -0.06822549, 
-                    0.07665912,  0.3134014,   0.17848536, -0.1225775,  -0.09916984, -0.07495987, 
-                    0.06413227,  0.14441176,  0.60894334,  0.17463093,  0.05335403, -0.01273871, 
-                    0.03474107, -0.8123879,  -0.04688699,  0.20193407,  0.2031118,  -0.03935686, 
-                    0.06967544, -0.01553638, -0.03405238, -0.06528071,  0.12250231,  0.13991883, 
-                    -0.17446303, -0.08011883,  0.0849521,  -0.01041659, -0.13705009,  0.20127155, 
-                    0.10069408,  0.00653003,  0.01685157 ]
-        for i, token in enumerate(vocabulary) : 
-            if token not in embeddings_index:
-                ids_to_glove[i+1] = unk_embed
-            else : 
-                ids_to_glove[i+1] = embeddings_index[token] 
-                    
-        return
-
-    def glove_embedding(self, glove_dir):
-        
-        return 
-
-    def make_tag_lookup_table():
-        iob_labels = ["B", "I"]
-        ner_labels = ["PER", "ORG", "LOC", "MISC"]
-        all_labels = [(label1, label2) for label2 in ner_labels for label1 in iob_labels]
-        all_labels = ["-".join([a, b]) for a, b in all_labels]
-        all_labels = ["[PAD]", "O"] + all_labels
-        return dict(zip(range(0, len(all_labels) + 1), all_labels))
-
-    def get_vocab(conll_data):
-        all_tokens = sum(conll_data["train"]["tokens"], [])
-        all_tokens_array = np.array(list(map(str.lower, all_tokens)))
-
-        counter = Counter(all_tokens_array)
-        print(len(counter))
-
-        num_tags = len(mapping)
-        print(num_tags)
-        vocab_size = 20000
-
-        # We only take (vocab_size - 2) most commons words from the training data since
-        # the `StringLookup` class uses 2 additional tokens - one denoting an unknown
-        # token and another one denoting a masking token
-        vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
-
-        # The StringLook class will convert tokens to token IDs
-        lookup_layer = keras.layers.StringLookup(
-            vocabulary=vocabulary
-        )   
-        return lookup_layer   
 
     #-------------------------------------
 

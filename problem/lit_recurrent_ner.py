@@ -327,35 +327,26 @@ class SimpleClsHead(nn.Module):
 
 
 class GloveEmbedding(nn.Module):
-    def __init__(self, input_dim, embed_dim, glove_dir, unk_embed, conll_data):
+    def __init__(self, input_dim, embed_dim, glove_dir, conll_data):
         super().__init__()
-        self.unk_embed = unk_embed
+
         self.conll_data = conll_data
         self.glove_dir = glove_dir
         self.input_dim = input_dim
-        self.embed_dim = embed_dim
-        
-    # Label to index
-    def make_tag_lookup_table():
-        iob_labels = ["B", "I"]
-        ner_labels = ["PER", "ORG", "LOC", "MISC"]
-        all_labels = [(label1, label2) for label2 in ner_labels for label1 in iob_labels]
-        all_labels = ["-".join([a, b]) for a, b in all_labels]
-        all_labels = ["[PAD]", "O"] + all_labels
-        return dict(zip(range(0, len(all_labels) + 1), all_labels))
+        self.embed_dim = embed_dim 
+
+        init_token_emb = self.init_token_emb()
+        self.token_emb = init_token_emb[0]
+        self.ids_to_glove = init_token_emb[1]
+        self.embedding_matrix = init_token_emb[2]
 
     def get_vocab(self):
         all_tokens = sum(self.conll_data["train"]["tokens"], [])
         all_tokens_array = np.array(list(map(str.lower, all_tokens)))
 
         counter = Counter(all_tokens_array)
-        print(len(counter))
 
-        mapping = self.make_tag_lookup_table()
-
-        num_tags = len(mapping)
-        print(num_tags)
-        vocab_size = 20000
+        vocab_size = len(counter)
 
         # We only take (vocab_size - 2) most commons words from the training data since
         # the `StringLookup` class uses 2 additional tokens - one denoting an unknown
@@ -364,7 +355,7 @@ class GloveEmbedding(nn.Module):
         return vocabulary
 
     def init_token_emb(self):
-        vocabulary = self.get_vocab(self.conll_data)
+        vocabulary = self.get_vocab()
         embeddings_index = {} # empty dictionary
         f = open(self.glove_dir, encoding="utf-8")
 
@@ -374,21 +365,9 @@ class GloveEmbedding(nn.Module):
             coefs = np.asarray(values[1:], dtype='float32')
             embeddings_index[word] = coefs
         f.close()
-        print('Found %s word vectors.' % len(embeddings_index))
-
-        # tf_vocab = tf.constant(vocabulary)
-        # ids = lookup_layer(tf_vocab)
-        # for token,i in enumerate(vocabulary) : 
-        ids_to_glove = {}
-
-        for i, token in enumerate(vocabulary) : 
-            if token not in embeddings_index:
-                ids_to_glove[i+1] = self.unk_embed
-            else : 
-                ids_to_glove[i+1] = embeddings_index[token]
 
         num_tokens = len(vocabulary) + 2
-        embedding_dim = 50
+        embedding_dim = self.embed_dim
 
         word_index = dict(zip(vocabulary, range(1, len(vocabulary)+1)))
         # Prepare embedding matrix
@@ -400,19 +379,66 @@ class GloveEmbedding(nn.Module):
                 # This includes the representation for "padding" and "OOV"
                 embedding_matrix[i] = embedding_vector
 
-        token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embs_npa).float())
-        return token_emb
+        # Calculate unk_emb
+        unk_embed = np.mean(embedding_matrix,axis=0,keepdims=True) 
+
+        ids_to_glove = {}
+
+        for i, token in enumerate(vocabulary) : 
+            if token not in embeddings_index:
+                ids_to_glove[i+1] = unk_embed
+            else : 
+                ids_to_glove[i+1] = embeddings_index[token]
+
+        token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float())
+        return token_emb, ids_to_glove, embedding_matrix, unk_embed
 
     def forward(self, x):
         x = self.token_emb(x)
-        return x
+        return x # shape = (vocab, embed_dim)
 
+from datasets import load_dataset
+import tensorflow as tf
+class HandleData():
+    def __init__(self):
+        self.conll_data = load_dataset("conll2003")
+        self.mapping = self.make_tag_lookup_table()
+        self.num_tags = len(self.mapping)
+
+    def make_tag_lookup_table(self):
+        iob_labels = ["B", "I"]
+        ner_labels = ["PER", "ORG", "LOC", "MISC"]
+        all_labels = [(label1, label2) for label2 in ner_labels for label1 in iob_labels]
+        all_labels = ["-".join([a, b]) for a, b in all_labels]
+        all_labels = ["[PAD]", "O"] + all_labels
+        return dict(zip(range(0, len(all_labels) + 1), all_labels))
+
+    def map_record_to_training_data(record):
+        record = tf.strings.split(record, sep="\t")
+        length = tf.strings.to_number(record[0], out_type=tf.int32)
+        tokens = record[1 : length + 1]
+        tags = record[length + 1 :]
+        tags = tf.strings.to_number(tags, out_type=tf.int64)
+        tags += 1
+        return tokens, tags
+
+
+    def lowercase_and_convert_to_ids(tokens):
+        tokens = tf.strings.lower(tokens)
+        return lookup_layer(tokens)
 
 import os
 par_root = os.path.abspath('..')
 root = os.getcwd()
 glove_dir = os.path.join(par_root, 'glove/glove.6B.200d.txt')
-glove_test = GloveEmbedding(40000,200,glove_dir)
+
+handle_data = HandleData()
+conll_data = handle_data.conll_data
+conll_data = load_dataset("conll2003")
+glove_test = GloveEmbedding(input_dim = 40000, embed_dim = 200, glove_dir = glove_dir, conll_data = conll_data)
+
+# print(glove_test.embedding_matrix.shape)
+input = torch.LongTensor([[0],[1]])
 
 with torch.no_grad():
-    print(glove_test.forward('where are you come from'))
+    print(glove_test.forward(input))

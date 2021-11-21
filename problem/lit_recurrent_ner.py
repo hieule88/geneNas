@@ -9,7 +9,7 @@ import datasets
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from transformers import AutoConfig, AutoModel, AdamW, get_linear_schedule_with_warmup
+from transformers import AdamW, get_linear_schedule_with_warmup
 from util.logger import ChromosomeLogger
 from util.exception import NanException
 
@@ -19,7 +19,7 @@ import os
 class LightningRecurrent_NER(pl.LightningModule):
     def __init__(
         self,
-        glove_dir: str,
+        model_name_or_path: str,
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
@@ -46,7 +46,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         #     model_name_or_path, num_labels=num_labels
         # )
         # self.embed = AutoModel.from_pretrained(model_name_or_path, config=self.config)
-        self.embed = GloveEmbedding(glove_dir)
+        self.embed = GloveEmbedding(glove_dir = model_name_or_path)
         if unfreeze_embed:
             for param in self.embed.parameters():
                 param.requires_grad = False
@@ -90,10 +90,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         x = self.rnn_dropout(x)
         # if x.isnan().any():
         #     raise NanException(f"NaN after recurrent")
-        if self.hparams.batch_first:
-            x = x[:, 0, :]  # CLS token
-        else:
-            x = x[0, :, :]
+
         logits = self.cls_head(x)
         # if logits.isnan().any():
         #     raise NanException(f"NaN after CLS head")
@@ -104,7 +101,7 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss_fct = nn.CrossEntropyLoss()
+                loss_fct = CustomNonPaddingTokenLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
         return loss, logits, hiddens
 
@@ -288,6 +285,18 @@ class LightningRecurrent_NER(pl.LightningModule):
         parser.add_argument("--unfreeze_embed", action="store_false")
         parser.add_argument("--use_simple_cls", action="store_true")
         return parser
+        
+class CustomNonPaddingTokenLoss(nn.CrossEntropyLoss()):
+    def __init__(self):
+        super().__init__()
+
+    def call(self, y_true, y_pred):
+        loss = self(y_true, y_pred)
+        mask = tf.cast((y_true > 0), dtype=tf.float32)
+        loss = loss * mask
+        return tf.reduce_sum(loss) / tf.reduce_sum(mask)
+
+import pytorch_forecasting.models.temporal_fusion_transformer.sub_modules.TimeDistributed as TimeDistributed
 
 class ClsHead(nn.Module):
     """Head for sentence-level classification tasks."""
@@ -297,8 +306,10 @@ class ClsHead(nn.Module):
         self.dense = nn.Linear(hidden_size * 2, hidden_size)
         self.dropout = nn.Dropout(dropout)
         self.out_proj = nn.Linear(hidden_size, num_labels)
+        self.timeDistributed = TimeDistributed(self.dense)
 
     def forward(self, x, **kwargs):
+        x = self.timeDistributed(x)
         x = self.dropout(x)
         x = self.dense(x)
         x = torch.tanh(x)
@@ -325,37 +336,23 @@ class SimpleClsHead(nn.Module):
     def reset_parameters(self):
         self.dense.reset_parameters()
 
+from torchtext.vocab import vocab
+from collections import OrderedDict
 
 class GloveEmbedding(nn.Module):
-    def __init__(self, input_dim, embed_dim, glove_dir, conll_data):
+    def __init__(self, glove_dir):
         super().__init__()
 
-        self.conll_data = conll_data
+        self.data_handling = HandleData()
         self.glove_dir = glove_dir
-        self.input_dim = input_dim
-        self.embed_dim = embed_dim 
-
+        self.embed_dim = int(glove_dir.split('.')[-2][:-1]) 
         init_token_emb = self.init_token_emb()
         self.token_emb = init_token_emb[0]
         self.ids_to_glove = init_token_emb[1]
         self.embedding_matrix = init_token_emb[2]
 
-    def get_vocab(self):
-        all_tokens = sum(self.conll_data["train"]["tokens"], [])
-        all_tokens_array = np.array(list(map(str.lower, all_tokens)))
-
-        counter = Counter(all_tokens_array)
-
-        vocab_size = len(counter)
-
-        # We only take (vocab_size - 2) most commons words from the training data since
-        # the `StringLookup` class uses 2 additional tokens - one denoting an unknown
-        # token and another one denoting a masking token
-        vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
-        return vocabulary
-
     def init_token_emb(self):
-        vocabulary = self.get_vocab()
+        vocabulary = self.data_handling.vocab
         embeddings_index = {} # empty dictionary
         f = open(self.glove_dir, encoding="utf-8")
 
@@ -399,11 +396,29 @@ class GloveEmbedding(nn.Module):
 
 from datasets import load_dataset
 import tensorflow as tf
+from torchtext.vocab import vocab
+from collections import OrderedDict
+
 class HandleData():
     def __init__(self):
         self.conll_data = load_dataset("conll2003")
         self.mapping = self.make_tag_lookup_table()
         self.num_tags = len(self.mapping)
+        self.vocab = self.get_vocab()
+
+    def get_vocab(self):
+        all_tokens = sum(self.conll_data["train"]["tokens"], [])
+        all_tokens_array = np.array(list(map(str.lower, all_tokens)))
+
+        counter = Counter(all_tokens_array)
+
+        vocab_size = len(counter)
+
+        # We only take (vocab_size - 2) most commons words from the training data since
+        # the `StringLookup` class uses 2 additional tokens - one denoting an unknown
+        # token and another one denoting a masking token
+        vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
+        return vocabulary
 
     def make_tag_lookup_table(self):
         iob_labels = ["B", "I"]
@@ -412,6 +427,13 @@ class HandleData():
         all_labels = ["-".join([a, b]) for a, b in all_labels]
         all_labels = ["[PAD]", "O"] + all_labels
         return dict(zip(range(0, len(all_labels) + 1), all_labels))
+
+    def lookup_layer(self):
+        return vocab(OrderedDict([(token, 1) for token in self.vocab]))
+
+    def lowercase_and_convert_to_ids(self, tokens):
+        tokens = tf.strings.lower(tokens)
+        return self.lookup_layer(tokens)
 
     def map_record_to_training_data(record):
         record = tf.strings.split(record, sep="\t")
@@ -422,20 +444,26 @@ class HandleData():
         tags += 1
         return tokens, tags
 
-
-    def lowercase_and_convert_to_ids(tokens):
-        tokens = tf.strings.lower(tokens)
-        return lookup_layer(tokens)
+    def export_to_file(export_file_path, data):
+        with open(export_file_path, "w") as f:
+            for record in data:
+                ner_tags = record["ner_tags"]
+                tokens = record["tokens"]
+                f.write(
+                    str(len(tokens))
+                    + "\t"
+                    + "\t".join(tokens)
+                    + "\t"
+                    + "\t".join(map(str, ner_tags))
+                    + "\n"
+                )
 
 import os
 par_root = os.path.abspath('..')
 root = os.getcwd()
 glove_dir = os.path.join(par_root, 'glove/glove.6B.200d.txt')
 
-handle_data = HandleData()
-conll_data = handle_data.conll_data
-conll_data = load_dataset("conll2003")
-glove_test = GloveEmbedding(input_dim = 40000, embed_dim = 200, glove_dir = glove_dir, conll_data = conll_data)
+glove_test = GloveEmbedding(glove_dir = glove_dir)
 
 # print(glove_test.embedding_matrix.shape)
 input = torch.LongTensor([[0],[1]])

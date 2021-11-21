@@ -15,6 +15,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": ["text"],
         "trec": ["text"],
         "twitter": ["text"],
+        "ner": ["tokens"],
         # "health_fact": ["main_text"],
     }
 
@@ -24,6 +25,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": ["label"],
         "trec": ["label-coarse"],
         "twitter": ["label"],
+        "ner": ["ner_tags"]
         # "health_fact": ["label"],
     }
 
@@ -33,6 +35,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": 2,
         "trec": 6,
         "twitter": 3,
+        "ner": 10,
         # "health_fact": 5,
     }
 
@@ -42,6 +45,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": "f1",
         "trec": "accuracy",
         "twitter": "accuracy",
+        "ner": "accuracy",
         # "health_fact": "accuracy",
     }
 
@@ -51,6 +55,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": ["imdb"],
         "trec": ["trec"],
         "twitter": ["tweet_eval", "sentiment"],
+        "ner" : ["conll2003"],
         # "health_fact": ["health_fact"],
     }
 

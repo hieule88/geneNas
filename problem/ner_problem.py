@@ -21,7 +21,6 @@ class NERProblem(Problem):
         super().__init__(args)
         self.function_set = NLPFunctionSet.return_func_name()
         self.dm = DataModule.from_argparse_args(self.hparams)
-        self.dm.prepare_data()
         self.dm.setup("fit")
 
         self.chromsome_logger = ChromosomeLogger()
@@ -30,13 +29,6 @@ class NERProblem(Problem):
         self.progress_bar = 0
         self.weights_summary = None
         self.early_stop = None
-    
-    #-------------------------------------
-    # Glove embedding
-
-
-
-    #-------------------------------------
 
     def parse_chromosome(
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False

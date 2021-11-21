@@ -321,7 +321,6 @@ class ClsHead(nn.Module):
         self.dense.reset_parameters()
         self.out_proj.reset_parameters()
 
-
 class SimpleClsHead(nn.Module):
 
     def __init__(self, hidden_size, dropout, num_labels):

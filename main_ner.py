@@ -1,8 +1,10 @@
 import argparse
 import pytorch_lightning as pl
 
-from problem import ner_problem, DataModule, LightningRecurrentRWE
-from evolution import optimizer
+from problem import  DataModule
+from problem.ner_problem import NERProblem
+from problem.lit_recurrent_ner import LightningRecurrent_NER
+from evolution.optimizer import Optimizer
 
 import logging
 
@@ -11,13 +13,13 @@ logging.disable(logging.CRITICAL)
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser = ner_problem.add_arguments(parser)
+    parser = NERProblem.add_arguments(parser)
     parser = pl.Trainer.add_argparse_args(parser)
     parser = DataModule.add_argparse_args(parser)
     parser = DataModule.add_cache_arguments(parser)
-    parser = LightningRecurrentRWE.add_model_specific_args(parser)
-    parser = LightningRecurrentRWE.add_learning_specific_args(parser)
-    parser = optimizer.add_optimizer_specific_args(parser)
+    parser = LightningRecurrent_NER.add_model_specific_args(parser)
+    parser = LightningRecurrent_NER.add_learning_specific_args(parser)
+    parser = Optimizer.add_optimizer_specific_args(parser)
     parser.add_argument("--seed", type=int, default=42)
 
     args = parser.parse_args()
@@ -41,10 +43,10 @@ def main():
     args = parse_args()
 
     # solve source problems
-    problem = ner_problem(args)
+    problem = NERProblem(args)
 
     # create optimizer
-    ga_optimizer = optimizer(args)
+    ga_optimizer = Optimizer(args)
 
     # Optimize architecture
     population, objs = ga_optimizer.ga(problem)

@@ -215,10 +215,6 @@ class DataModule(pl.LightningDataModule):
 
         return v_t_i, vocabulary, vocab_size
 
-    def words_to_ids(word):
-        
-        return 
-
     def convert_to_features(self, example_batch, indices=None):
         vocab_to_ids(self)
         # Either encode single sentence or sentence pairs

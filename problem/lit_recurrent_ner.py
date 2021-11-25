@@ -15,6 +15,7 @@ from util.exception import NanException
 
 from collections import Counter
 import os
+from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 class LightningRecurrent_NER(pl.LightningModule):
     def __init__(
@@ -69,7 +70,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         recurrent_model = RecurrentNet(
             cells,
             adfs,
-            self.config.hidden_size,
+            128,
             self.hparams.hidden_size,
             num_layers=self.hparams.num_layers,
             batch_first=self.hparams.batch_first,
@@ -85,6 +86,9 @@ class LightningRecurrent_NER(pl.LightningModule):
         if "labels" in inputs:
             labels = inputs.pop("labels")
         x = self.embed(**inputs)[0]
+
+        x = TimeDistributed(nn.Linear(50,1))(x)
+
         # if x.isnan().any():
         #     raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
@@ -297,8 +301,6 @@ class LightningRecurrent_NER(pl.LightningModule):
 #         mask = tf.cast((y_true > 0), dtype=tf.float32)
 #         loss = loss * mask
 #         return tf.reduce_sum(loss) / tf.reduce_sum(mask)
-
-from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 class ClsHead(nn.Module):
     """Head for sentence-level classification tasks."""

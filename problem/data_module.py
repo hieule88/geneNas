@@ -112,6 +112,7 @@ class DataModule(pl.LightningDataModule):
         self.v_t_ids = self.vocab[0]
         self.vocabulary = self.vocab[1]
         self.len_vocab = self.vocab[2]
+        self.dataset
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):

@@ -103,10 +103,10 @@ class DataModule(pl.LightningDataModule):
 
         self.text_fields = self.task_text_field_map[task_name]
         self.num_labels = self.glue_task_num_labels[task_name]
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name_or_path, use_fast=True
-        )
-
+        if self.task_name != 'ner':
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name_or_path, use_fast=True
+            )
 
         self.vocab = self.vocab_to_ids()
         self.v_t_ids = self.vocab[0]

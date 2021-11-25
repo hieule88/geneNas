@@ -47,7 +47,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         #     model_name_or_path, num_labels=num_labels
         # )
         # self.embed = AutoModel.from_pretrained(model_name_or_path, config=self.config)
-        self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = self.vocab)
+        self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = vocab)
         if unfreeze_embed:
             for param in self.embed.parameters():
                 param.requires_grad = False

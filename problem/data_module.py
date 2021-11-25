@@ -108,16 +108,13 @@ class DataModule(pl.LightningDataModule):
                 self.model_name_or_path, use_fast=True
             )
 
-        self.vocab = self.vocab_to_ids()
-        self.v_t_ids = self.vocab[0]
-        self.vocabulary = self.vocab[1]
-        self.len_vocab = self.vocab[2]
-        self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
+        
+        # self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):
         if not self.cache_dataset:
-            # self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
+            self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
 
             for split in self.dataset.keys():
                 self.dataset[split] = self.dataset[split].map(
@@ -209,6 +206,11 @@ class DataModule(pl.LightningDataModule):
         vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
         
         v_t_i = dict(zip(vocabulary, range(1, len(vocabulary)+1)))
+
+        self.v_t_ids = v_t_i
+        self.vocabulary = vocabulary
+        self.len_vocab = vocab_size
+
         return v_t_i, vocabulary, vocab_size
 
     def words_to_ids(word):

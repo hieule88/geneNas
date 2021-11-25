@@ -411,16 +411,16 @@ def get_vocab(conll_data):
     vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
     return vocabulary
 
-import os
-par_root = os.path.abspath('..')
-root = os.getcwd()
-glove_dir = os.path.join(par_root, 'glove/glove.6B.200d.txt')
-conll_data = load_dataset("conll2003")
+# import os
+# par_root = os.path.abspath('..')
+# root = os.getcwd()
+# glove_dir = os.path.join(par_root, 'glove/glove.6B.200d.txt')
+# conll_data = load_dataset("conll2003")
 
-glove_test = GloveEmbedding(glove_dir = glove_dir, vocab = get_vocab(conll_data))
+# glove_test = GloveEmbedding(glove_dir = glove_dir, vocab = get_vocab(conll_data))
 
-# print(glove_test.embedding_matrix.shape)
-input = torch.LongTensor([1,0,1])
-print(input)
-with torch.no_grad():
-    print(glove_test.forward(input))
+# # print(glove_test.embedding_matrix.shape)
+# input = torch.LongTensor([1,0,1])
+# print(input)
+# with torch.no_grad():
+#     print(glove_test.forward(input))

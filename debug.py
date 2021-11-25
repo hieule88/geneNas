@@ -10,7 +10,7 @@ from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import T
 input = torch.Tensor([[2, 3], [4, 6], [0,1]])
 # print(input.shape)
 print(input.shape)
-output = TimeDistributed(nn.Linear(2,1))(input)
+output = nn.Linear(2,1)(input)
 print(output.size())
 # # tokenizer = AutoTokenizer.from_pretrained(
 # #             model_name_or_path, use_fast=True

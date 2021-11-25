@@ -83,6 +83,7 @@ class NLPProblem(Problem):
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
         glue_pl = LightningRecurrent_NER(
+            vocab= self.dm.vocabulary,
             num_labels=self.dm.num_labels,
             eval_splits=self.dm.eval_splits,
             **vars(self.hparams),
@@ -179,6 +180,7 @@ class NERProblem(NLPProblem):
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
         glue_pl = LightningRecurrent_NER(
+            vocab= self.dm.vocabulary,
             num_labels=self.dm.num_labels,
             eval_splits=self.dm.eval_splits,
             **vars(self.hparams),

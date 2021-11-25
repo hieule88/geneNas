@@ -110,7 +110,8 @@ class DataModule(pl.LightningDataModule):
 
         self.vocab = self.vocab_to_ids()
         self.v_t_ids = self.vocab[0]
-        self.len_vocab = self.vocab[1]
+        self.vocabulary = self.vocab[1]
+        self.len_vocab = self.vocab[2]
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):
@@ -207,7 +208,7 @@ class DataModule(pl.LightningDataModule):
         vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
         
         v_t_i = dict(zip(vocabulary, range(1, len(vocabulary)+1)))
-        return v_t_i, vocab_size
+        return v_t_i, vocabulary, vocab_size
 
     def words_to_ids(word):
         

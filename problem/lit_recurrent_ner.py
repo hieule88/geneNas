@@ -20,6 +20,7 @@ class LightningRecurrent_NER(pl.LightningModule):
     def __init__(
         self,
         model_name_or_path: str,
+        vocab,
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
@@ -46,7 +47,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         #     model_name_or_path, num_labels=num_labels
         # )
         # self.embed = AutoModel.from_pretrained(model_name_or_path, config=self.config)
-        self.embed = GloveEmbedding(glove_dir = model_name_or_path)
+        self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = self.vocab)
         if unfreeze_embed:
             for param in self.embed.parameters():
                 param.requires_grad = False
@@ -336,9 +337,6 @@ class SimpleClsHead(nn.Module):
     def reset_parameters(self):
         self.dense.reset_parameters()
 
-from torchtext.vocab import vocab
-from collections import OrderedDict
-
 class GloveEmbedding(nn.Module):
     def __init__(self, glove_dir, vocab):
         super().__init__()
@@ -394,22 +392,21 @@ class GloveEmbedding(nn.Module):
         x = self.token_emb(x)
         return x 
 
-from datasets import load_dataset
-import tensorflow as tf
-from torchtext.vocab import vocab
-from collections import OrderedDict
+# from datasets import load_dataset
+# import tensorflow as tf
+# from collections import OrderedDict
 
 
-def get_vocab(conll_data):
-    all_tokens = sum(conll_data["train"]["tokens"], [])
-    all_tokens_array = np.array(list(map(str.lower, all_tokens)))
+# def get_vocab(conll_data):
+#     all_tokens = sum(conll_data["train"]["tokens"], [])
+#     all_tokens_array = np.array(list(map(str.lower, all_tokens)))
 
-    counter = Counter(all_tokens_array)
+#     counter = Counter(all_tokens_array)
 
-    vocab_size = len(counter)
+#     vocab_size = len(counter)
 
-    vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
-    return vocabulary
+#     vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
+#     return vocabulary
 
 # import os
 # par_root = os.path.abspath('..')

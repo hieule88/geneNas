@@ -112,12 +112,12 @@ class DataModule(pl.LightningDataModule):
         self.v_t_ids = self.vocab[0]
         self.vocabulary = self.vocab[1]
         self.len_vocab = self.vocab[2]
-        self.dataset = ''
+        self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):
         if not self.cache_dataset:
-            self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
+            # self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
 
             for split in self.dataset.keys():
                 self.dataset[split] = self.dataset[split].map(

@@ -21,7 +21,7 @@ class NLPProblem(Problem):
         super().__init__(args)
         self.function_set = NLPFunctionSet.return_func_name()
         self.dm = DataModule.from_argparse_args(self.hparams)
-        self.dm.prepare_data()
+        # self.dm.prepare_data()
         self.dm.setup("fit")
 
         self.chromsome_logger = ChromosomeLogger()

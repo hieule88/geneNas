@@ -35,44 +35,25 @@ def parse_args():
     return args
 
 
-def main_source():
+def main():
     # get args
     args = parse_args()
 
-    # solve source problems
+    # solve problems
     problem = NERProblem(args)
     problem.progress_bar = 10
     problem.weights_summary = "top"
     if args.early_stop > 0:
         problem.early_stop = args.early_stop
-    problem.evaluate(None)
 
+    optimizer = Optimizer(args)
+    print('Run')
+    population, objs = optimizer.ga(problem)
 
-# def main_target():
-#     # get args
-#     args = parse_args()
-
-#     # load source models
-#     names, models = amt.util.load_models()
-
-#     # solve source problems
-#     problem = GLUEProblem(args)
-
-#     # create optimizer
-#     optimizer = Optimizer(args)
-
-#     # Optimize architecture
-#     population, fitness = optimizer.transfer_ga(problem, models)
-
-#     # build and save model
-#     lb, ub = problem.get_bounds()
-#     model = amt.MultinomialModel(population, lb, ub)
-#     amt.util.save_model(model, args.task_name)
-
-
-def main():
-    main_source()
-    # main_target()
+    for i, idv in enumerate(population):
+        symbols, _, _ = problem.replace_value_with_symbol(population[i])
+        print(f"Individual {i + 1}: {objs[i]}, chromosome: {symbols}")
+        problem.make_graph(idv, prefix=f"{args.task_name}.idv_{i+1}")
 
 
 if __name__ == "__main__":

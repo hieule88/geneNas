@@ -10,7 +10,7 @@ import torch.nn as nn
 from .abstract_problem import Problem
 from .function_set import NLPFunctionSet
 from .data_module import DataModule
-from .lit_recurrent import LightningRecurrent, LightningRecurrentRWE
+from .lit_recurrent_ner import LightningRecurrent_NER
 
 from network import RecurrentNet
 from util.logger import ChromosomeLogger
@@ -31,7 +31,7 @@ class NLPProblem(Problem):
         self.weights_summary = None
         self.early_stop = None
 
-    def parse_chromosome(
+    def parse_chromosome( 
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False
     ):
         return super().parse_chromosome(
@@ -82,7 +82,7 @@ class NLPProblem(Problem):
         self.chromsome_logger.log_chromosome(chromosome)
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
-        glue_pl = LightningRecurrent(
+        glue_pl = LightningRecurrent_NER(
             num_labels=self.dm.num_labels,
             eval_splits=self.dm.eval_splits,
             **vars(self.hparams),
@@ -178,7 +178,7 @@ class NERProblem(NLPProblem):
         self.chromsome_logger.log_chromosome(chromosome)
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
-        glue_pl = LightningRecurrent(
+        glue_pl = LightningRecurrent_NER(
             num_labels=self.dm.num_labels,
             eval_splits=self.dm.eval_splits,
             **vars(self.hparams),

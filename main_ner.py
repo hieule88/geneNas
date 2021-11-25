@@ -1,14 +1,11 @@
 import argparse
+
 import pytorch_lightning as pl
 
-from problem import  DataModule
-from problem.ner_problem import NERProblem
+from problem import DataModule
 from problem.lit_recurrent_ner import LightningRecurrent_NER
-from evolution.optimizer import Optimizer
-
-import logging
-
-logging.disable(logging.CRITICAL)
+from problem.ner_problem import NERProblem
+from evolution import Optimizer
 
 
 def parse_args():
@@ -17,10 +14,10 @@ def parse_args():
     parser = pl.Trainer.add_argparse_args(parser)
     parser = DataModule.add_argparse_args(parser)
     parser = DataModule.add_cache_arguments(parser)
-    parser = LightningRecurrent_NER.add_model_specific_args(parser)
-    parser = LightningRecurrent_NER.add_learning_specific_args(parser)
     parser = Optimizer.add_optimizer_specific_args(parser)
+    parser = LightningRecurrent_NER.add_model_specific_args(parser)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--early_stop", type=int, default=0)
 
     args = parser.parse_args()
 
@@ -38,23 +35,45 @@ def parse_args():
     return args
 
 
-def main():
+def main_source():
     # get args
     args = parse_args()
 
     # solve source problems
     problem = NERProblem(args)
+    problem.progress_bar = 10
+    problem.weights_summary = "top"
+    if args.early_stop > 0:
+        problem.early_stop = args.early_stop
+    problem.evaluate(None)
 
-    # create optimizer
-    ga_optimizer = Optimizer(args)
 
-    # Optimize architecture
-    population, objs = ga_optimizer.ga(problem)
+# def main_target():
+#     # get args
+#     args = parse_args()
 
-    for i, idv in enumerate(population):
-        symbols, _, _ = problem.replace_value_with_symbol(population[i])
-        print(f"Individual {i + 1}: {objs[i]}, chromosome: {symbols}")
-        problem.make_graph(idv, prefix=f"{args.task_name}.idv_{i+1}")
+#     # load source models
+#     names, models = amt.util.load_models()
+
+#     # solve source problems
+#     problem = GLUEProblem(args)
+
+#     # create optimizer
+#     optimizer = Optimizer(args)
+
+#     # Optimize architecture
+#     population, fitness = optimizer.transfer_ga(problem, models)
+
+#     # build and save model
+#     lb, ub = problem.get_bounds()
+#     model = amt.MultinomialModel(population, lb, ub)
+#     amt.util.save_model(model, args.task_name)
+
+
+def main():
+    main_source()
+    # main_target()
+
 
 if __name__ == "__main__":
     main()

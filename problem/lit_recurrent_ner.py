@@ -101,7 +101,7 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss_fct = CustomNonPaddingTokenLoss()
+                loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
         return loss, logits, hiddens
 
@@ -285,18 +285,19 @@ class LightningRecurrent_NER(pl.LightningModule):
         parser.add_argument("--unfreeze_embed", action="store_false")
         parser.add_argument("--use_simple_cls", action="store_true")
         return parser
-        
-class CustomNonPaddingTokenLoss(nn.CrossEntropyLoss()):
-    def __init__(self):
-        super().__init__()
 
-    def call(self, y_true, y_pred):
-        loss = self(y_true, y_pred)
-        mask = tf.cast((y_true > 0), dtype=tf.float32)
-        loss = loss * mask
-        return tf.reduce_sum(loss) / tf.reduce_sum(mask)
 
-import pytorch_forecasting.models.temporal_fusion_transformer.sub_modules.TimeDistributed as TimeDistributed
+# class CustomNonPaddingTokenLoss(nn.CrossEntropyLoss()):
+#     def __init__(self):
+#         super().__init__()
+
+#     def call(self, y_true, y_pred):
+#         loss = self(y_true, y_pred)
+#         mask = tf.cast((y_true > 0), dtype=tf.float32)
+#         loss = loss * mask
+#         return tf.reduce_sum(loss) / tf.reduce_sum(mask)
+
+from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 class ClsHead(nn.Module):
     """Head for sentence-level classification tasks."""
@@ -339,20 +340,17 @@ from torchtext.vocab import vocab
 from collections import OrderedDict
 
 class GloveEmbedding(nn.Module):
-    def __init__(self, glove_dir):
+    def __init__(self, glove_dir, vocab):
         super().__init__()
 
-        self.data_handling = HandleData()
+        self.vocab = vocab
         self.glove_dir = glove_dir
         self.embed_dim = int(glove_dir.split('.')[-2][:-1]) 
-        init_token_emb = self.init_token_emb()
-        self.token_emb = init_token_emb[0]
-        self.ids_to_glove = init_token_emb[1]
-        self.embedding_matrix = init_token_emb[2]
+        self.token_emb = self.init_token_emb()
 
     def init_token_emb(self):
-        vocabulary = self.data_handling.vocab
-        embeddings_index = {} # empty dictionary
+        vocabulary = self.vocab
+        embeddings_index = {} # empty dictionary of GloVe
         f = open(self.glove_dir, encoding="utf-8")
 
         for line in f:
@@ -365,107 +363,64 @@ class GloveEmbedding(nn.Module):
         num_tokens = len(vocabulary) + 2
         embedding_dim = self.embed_dim
 
-        word_index = dict(zip(vocabulary, range(1, len(vocabulary)+1)))
+        word_index = dict(zip(vocabulary, range(1, len(vocabulary)+1))) # dict of Vocab Conll
         # Prepare embedding matrix
         embedding_matrix = np.zeros((num_tokens, embedding_dim))
+
+        # Index of dict GloVe fit index of Vocab Conll + 1  
         for word, i in word_index.items():
             embedding_vector = embeddings_index.get(word)
             if embedding_vector is not None:
-                # Words not found in embedding index will be all-zeros.
-                # This includes the representation for "padding" and "OOV"
-                embedding_matrix[i] = embedding_vector
+                embedding_matrix[i] = embedding_vector            
 
         # Calculate unk_emb
         unk_embed = np.mean(embedding_matrix,axis=0,keepdims=True) 
+        embedding_matrix[-1] = unk_embed
 
-        ids_to_glove = {}
-
-        for i, token in enumerate(vocabulary) : 
-            if token not in embeddings_index:
-                ids_to_glove[i+1] = unk_embed
-            else : 
-                ids_to_glove[i+1] = embeddings_index[token]
+        for word, i in word_index.items():
+            embedding_vector = embeddings_index.get(word)
+            if embedding_vector is None:
+                embedding_matrix[i] = unk_embed
+                # [PAD] = embedding_matrix[0] = [0,0,...0]
+                # <unk> = embedding_matrix[-1] = unk_embed
 
         token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float())
-        return token_emb, ids_to_glove, embedding_matrix, unk_embed
+        return token_emb
 
     def forward(self, x):
+        # INPUT : torch tensor OF INDEXES OF SENTENCE
+        # OUTPUT : torch tensor shape = (sentence_max_length, embed_dim) 
+        
         x = self.token_emb(x)
-        return x # shape = (vocab, embed_dim)
+        return x 
 
 from datasets import load_dataset
 import tensorflow as tf
 from torchtext.vocab import vocab
 from collections import OrderedDict
 
-class HandleData():
-    def __init__(self):
-        self.conll_data = load_dataset("conll2003")
-        self.mapping = self.make_tag_lookup_table()
-        self.num_tags = len(self.mapping)
-        self.vocab = self.get_vocab()
 
-    def get_vocab(self):
-        all_tokens = sum(self.conll_data["train"]["tokens"], [])
-        all_tokens_array = np.array(list(map(str.lower, all_tokens)))
+def get_vocab(conll_data):
+    all_tokens = sum(conll_data["train"]["tokens"], [])
+    all_tokens_array = np.array(list(map(str.lower, all_tokens)))
 
-        counter = Counter(all_tokens_array)
+    counter = Counter(all_tokens_array)
 
-        vocab_size = len(counter)
+    vocab_size = len(counter)
 
-        # We only take (vocab_size - 2) most commons words from the training data since
-        # the `StringLookup` class uses 2 additional tokens - one denoting an unknown
-        # token and another one denoting a masking token
-        vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
-        return vocabulary
-
-    def make_tag_lookup_table(self):
-        iob_labels = ["B", "I"]
-        ner_labels = ["PER", "ORG", "LOC", "MISC"]
-        all_labels = [(label1, label2) for label2 in ner_labels for label1 in iob_labels]
-        all_labels = ["-".join([a, b]) for a, b in all_labels]
-        all_labels = ["[PAD]", "O"] + all_labels
-        return dict(zip(range(0, len(all_labels) + 1), all_labels))
-
-    def lookup_layer(self):
-        return vocab(OrderedDict([(token, 1) for token in self.vocab]))
-
-    def lowercase_and_convert_to_ids(self, tokens):
-        tokens = tf.strings.lower(tokens)
-        return self.lookup_layer(tokens)
-
-    def map_record_to_training_data(record):
-        record = tf.strings.split(record, sep="\t")
-        length = tf.strings.to_number(record[0], out_type=tf.int32)
-        tokens = record[1 : length + 1]
-        tags = record[length + 1 :]
-        tags = tf.strings.to_number(tags, out_type=tf.int64)
-        tags += 1
-        return tokens, tags
-
-    def export_to_file(export_file_path, data):
-        with open(export_file_path, "w") as f:
-            for record in data:
-                ner_tags = record["ner_tags"]
-                tokens = record["tokens"]
-                f.write(
-                    str(len(tokens))
-                    + "\t"
-                    + "\t".join(tokens)
-                    + "\t"
-                    + "\t".join(map(str, ner_tags))
-                    + "\n"
-                )
+    vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
+    return vocabulary
 
 import os
 par_root = os.path.abspath('..')
 root = os.getcwd()
 glove_dir = os.path.join(par_root, 'glove/glove.6B.200d.txt')
+conll_data = load_dataset("conll2003")
 
-glove_test = GloveEmbedding(glove_dir = glove_dir)
+glove_test = GloveEmbedding(glove_dir = glove_dir, vocab = get_vocab(conll_data))
 
 # print(glove_test.embedding_matrix.shape)
-input = torch.LongTensor([[0],[1]])
-
+input = torch.LongTensor([1,0,1])
+print(input)
 with torch.no_grad():
     print(glove_test.forward(input))

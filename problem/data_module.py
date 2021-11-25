@@ -5,7 +5,8 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 import pytorch_lightning as pl
 from transformers import AutoTokenizer, AutoModel
 from sklearn.model_selection import KFold, train_test_split
-
+import numpy as np
+from collections import Counter
 
 class DataModule(pl.LightningDataModule):
 
@@ -105,6 +106,11 @@ class DataModule(pl.LightningDataModule):
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_name_or_path, use_fast=True
         )
+
+
+        self.vocab = self.vocab_to_ids()
+        self.v_t_ids = self.vocab[0]
+        self.len_vocab = self.vocab[1]
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):
@@ -124,6 +130,8 @@ class DataModule(pl.LightningDataModule):
                 ]
                 self.dataset[split].set_format(type="torch", columns=self.columns)
         else:
+            # if self.task_name == 'ner':
+            #     pass
             if self.task_name in ["cola", "sst2"]:
                 self.dataset["test"] = self.dataset["validation"]
             split_dict = self.dataset["train"].train_test_split(test_size=0.1, seed=42)
@@ -188,8 +196,24 @@ class DataModule(pl.LightningDataModule):
     def metric(self):
         return datasets.load_metric(self.metrics_names[self.task_name])
 
-    def convert_to_features(self, example_batch, indices=None):
+    def vocab_to_ids(self):
+        all_tokens = sum(self.dataset["train"]["tokens"], [])
+        all_tokens_array = np.array(list(map(str.lower, all_tokens)))
 
+        counter = Counter(all_tokens_array)
+
+        vocab_size = len(counter)
+
+        vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
+        
+        v_t_i = dict(zip(vocabulary, range(1, len(vocabulary)+1)))
+        return v_t_i, vocab_size
+
+    def words_to_ids(word):
+        
+        return 
+
+    def convert_to_features(self, example_batch, indices=None):
         # Either encode single sentence or sentence pairs
         if len(self.text_fields) > 1:
             texts_or_text_pairs = list(
@@ -202,12 +226,32 @@ class DataModule(pl.LightningDataModule):
             texts_or_text_pairs = example_batch[self.text_fields[0]]
 
         # Tokenize the text/text pairs
-        features = self.tokenizer.batch_encode_plus(
-            texts_or_text_pairs,
-            max_length=self.max_seq_length,
-            pad_to_max_length=True,
-            truncation=True,
-        )
+        if self.task_name != 'ner':
+            features = self.tokenizer.batch_encode_plus(
+                texts_or_text_pairs,
+                max_length=self.max_seq_length,
+                pad_to_max_length=True,
+                truncation=True,
+            )
+        
+        else:
+            max_length = self.max_seq_length
+            input_ids = []
+            sentence = []
+            for i in range(len(texts_or_text_pairs)):
+                for j in range(len(texts_or_text_pairs[i])):
+                    id = self.v_t_ids.get(texts_or_text_pairs[i][j].lower())
+                    if id is not None:
+                        sentence.append(id)
+                    else :
+                        sentence.append(self.len_vocab)
+                for j in range(len(texts_or_text_pairs[i]), max_length):
+                    sentence.append(0)
+                input_ids.append(sentence)
+
+            features = {}
+            features['input_ids'] = input_ids
+ 
 
         # Rename label to labels to make it easier to pass to model forward
         features["labels"] = example_batch[self.task_label_field_map[self.task_name][0]]

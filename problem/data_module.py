@@ -8,6 +8,8 @@ from sklearn.model_selection import KFold, train_test_split
 import numpy as np
 from collections import Counter
 
+from debug import vocab_to_ids
+
 class DataModule(pl.LightningDataModule):
 
     task_text_field_map = {
@@ -218,6 +220,7 @@ class DataModule(pl.LightningDataModule):
         return 
 
     def convert_to_features(self, example_batch, indices=None):
+        vocab_to_ids(self)
         # Either encode single sentence or sentence pairs
         if len(self.text_fields) > 1:
             texts_or_text_pairs = list(

@@ -87,8 +87,8 @@ class LightningRecurrent_NER(pl.LightningModule):
             labels = inputs.pop("labels")
 
         x = self.embed(**inputs)
-        print(x)
-        return
+        print(x.shape)
+        # return
         x = nn.Linear(50,1)(x)
 
         # if x.isnan().any():
@@ -312,15 +312,17 @@ class ClsHead(nn.Module):
         self.dense = nn.Linear(hidden_size * 2, hidden_size)
         self.dropout = nn.Dropout(dropout)
         self.out_proj = nn.Linear(hidden_size, num_labels)
-        self.timeDistributed = TimeDistributed(self.dense)
+        self.ff = TimeDistributed(self.dense)
+        self.timeDistributed = TimeDistributed(self.out_proj)
+        self.softmax = TimeDistributed(nn.Softmax(num_labels))
 
     def forward(self, x, **kwargs):
-        x = self.timeDistributed(x)
         x = self.dropout(x)
-        x = self.dense(x)
+        x = self.ff(x)
         x = torch.tanh(x)
         x = self.dropout(x)
-        x = self.out_proj(x)
+        x = self.timeDistributed(x)
+        x = self.softmax(x)
         return x
 
     def reset_parameters(self):

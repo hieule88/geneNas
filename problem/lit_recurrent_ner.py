@@ -88,7 +88,7 @@ class LightningRecurrent_NER(pl.LightningModule):
 
         print(inputs)
         return
-        x = self.embed(inputs)[0]
+        x = self.embed(**inputs)[0]
 
         x = nn.Linear(50,1)(x)
 
@@ -390,11 +390,11 @@ class GloveEmbedding(nn.Module):
         token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float())
         return token_emb
 
-    def forward(self, x):
+    def forward(self, input_ids):
         # INPUT : torch tensor OF INDEXES OF SENTENCE
         # OUTPUT : torch tensor shape = (sentence_max_length, embed_dim) 
         
-        x = self.token_emb(x)
+        x = self.token_emb(input_ids)
         return x 
 
 # from datasets import load_dataset

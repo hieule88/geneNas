@@ -137,7 +137,7 @@ class DataModule(pl.LightningDataModule):
         #     self.dataset["train"] = split_dict["train"]
         #     self.dataset["validation"] = split_dict["test"]
         self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
-
+        self.vocab_to_ids()
         for split in self.dataset.keys():
             print(self.dataset[split])
             self.dataset[split] = self.dataset[split].map(
@@ -152,8 +152,7 @@ class DataModule(pl.LightningDataModule):
             ]
 
             self.dataset[split] = self.dataset[split].set_format(type="torch", columns=self.columns)
-
-            return 
+ 
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
 
     def prepare_data(self):
@@ -231,7 +230,6 @@ class DataModule(pl.LightningDataModule):
         return v_t_i, vocabulary, vocab_size
 
     def convert_to_features(self, example_batch, indices=None):
-        self.vocab_to_ids()
         # Either encode single sentence or sentence pairs
         if len(self.text_fields) > 1:
             texts_or_text_pairs = list(

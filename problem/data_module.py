@@ -139,6 +139,7 @@ class DataModule(pl.LightningDataModule):
         self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
 
         for split in self.dataset.keys():
+            print(self.dataset[split])
             self.dataset[split] = self.dataset[split].map(
                 self.convert_to_features,
                 batched=True,
@@ -149,10 +150,9 @@ class DataModule(pl.LightningDataModule):
                 for c in self.dataset[split].column_names
                 if c in self.loader_columns
             ]
-            print(self.dataset[split])
-            print('**********************')
-            self.dataset[split].set_format(type="torch", columns=self.columns)
-            print(self.dataset[split])
+
+            self.dataset[split] = self.dataset[split].set_format(type="torch", columns=self.columns)
+
             return 
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
 

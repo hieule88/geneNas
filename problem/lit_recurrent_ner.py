@@ -86,8 +86,9 @@ class LightningRecurrent_NER(pl.LightningModule):
         if "labels" in inputs:
             labels = inputs.pop("labels")
 
-        x = self.embed(**inputs)[0]
-
+        x = self.embed(**inputs)
+        print(x)
+        return
         x = nn.Linear(50,1)(x)
 
         # if x.isnan().any():

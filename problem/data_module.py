@@ -151,7 +151,7 @@ class DataModule(pl.LightningDataModule):
                 if c in self.loader_columns
             ]
 
-            self.dataset[split] = self.dataset[split].set_format(type="torch", columns=self.columns)
+            self.dataset[split].set_format(type="torch", columns=self.columns)
  
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
 

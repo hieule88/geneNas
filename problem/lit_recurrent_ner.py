@@ -81,13 +81,11 @@ class LightningRecurrent_NER(pl.LightningModule):
     def init_chromosome_logger(self, logger: ChromosomeLogger):
         self.chromosome_logger = logger
 
-    def forward(self, hiddens, inputs):
+    def forward(self, hiddens, **inputs):
         labels = None
         if "labels" in inputs:
             labels = inputs.pop("labels")
 
-        print(inputs)
-        return
         x = self.embed(**inputs)[0]
 
         x = nn.Linear(50,1)(x)

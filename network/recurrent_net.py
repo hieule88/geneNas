@@ -132,7 +132,7 @@ class RecurrentNet(nn.Module):
         return output, hidden_states
 
     def forward(self, x, hidden_states=None):
-
+        
         if self.batch_first:  # B x S x H
             # left_to_right_x = x
             # right_to_left_x = torch.flip(x, dims=[1])

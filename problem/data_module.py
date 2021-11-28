@@ -139,7 +139,6 @@ class DataModule(pl.LightningDataModule):
         self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
         self.vocab_to_ids()
         for split in self.dataset.keys():
-            print(self.dataset[split])
             self.dataset[split] = self.dataset[split].map(
                 self.convert_to_features,
                 batched=True,
@@ -269,7 +268,7 @@ class DataModule(pl.LightningDataModule):
             features['input_ids'] = input_ids
  
 
-        # Rename label to labels to make it easier to pass to model forward
+        # Rename label to labels to make it easier to pass to model forward and Padding label
         features["labels"] = example_batch[self.task_label_field_map[self.task_name][0]]
         for label_index in range(len(features["labels"])):
             tmp_label = [0 for i in range(self.max_seq_length)]

@@ -87,9 +87,7 @@ class LightningRecurrent_NER(pl.LightningModule):
             labels = inputs.pop("labels")
 
         x = self.embed(**inputs)
-        print(x.shape)
         # return
-        x = nn.Linear(50,1)(x)
 
         # if x.isnan().any():
         #     raise NanException(f"NaN after embeds")

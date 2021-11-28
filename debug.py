@@ -6,3 +6,10 @@
 # out_proj = nn.Linear(3,2)
 
 # tD = 
+dataset = {
+    'train': 1,
+    'validation': 2,
+    'test': 3
+} 
+abc = [x for x in dataset.keys() if "validation" in x]
+print(abc)

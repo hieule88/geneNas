@@ -113,44 +113,46 @@ class DataModule(pl.LightningDataModule):
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):
-        # if not self.cache_dataset:
-        #     self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
 
-        #     for split in self.dataset.keys():
-        #         self.dataset[split] = self.dataset[split].map(
-        #             self.convert_to_features,
-        #             batched=True,
-        #             remove_columns=[self.task_label_field_map[self.task_name][0]],
-        #         )
-        #         self.columns = [
-        #             c
-        #             for c in self.dataset[split].column_names
-        #             if c in self.loader_columns
-        #         ]
-        #         self.dataset[split].set_format(type="torch", columns=self.columns)
-        # else:
-        #     # if self.task_name == 'ner':
-        #     #     pass
-        #     if self.task_name in ["cola", "sst2"]:
-        #         self.dataset["test"] = self.dataset["validation"]
-        #     split_dict = self.dataset["train"].train_test_split(test_size=0.1, seed=42)
-        #     self.dataset["train"] = split_dict["train"]
-        #     self.dataset["validation"] = split_dict["test"]
-        self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
-        self.vocab_to_ids()
-        for split in self.dataset.keys():
-            self.dataset[split] = self.dataset[split].map(
-                self.convert_to_features,
-                batched=True,
-                remove_columns=[self.task_label_field_map[self.task_name][0]],
-            )
-            self.columns = [
-                c
-                for c in self.dataset[split].column_names
-                if c in self.loader_columns
-            ]
+        if not self.cache_dataset:
+            self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
 
-            self.dataset[split].set_format(type="torch", columns=self.columns)
+            for split in self.dataset.keys():
+                self.dataset[split] = self.dataset[split].map(
+                    self.convert_to_features,
+                    batched=True,
+                    remove_columns=[self.task_label_field_map[self.task_name][0]],
+                )
+                self.columns = [
+                    c
+                    for c in self.dataset[split].column_names
+                    if c in self.loader_columns
+                ]
+                self.dataset[split].set_format(type="torch", columns=self.columns)
+        else:
+            # if self.task_name == 'ner':
+            #     pass
+            if self.task_name in ["cola", "sst2"]:
+                self.dataset["test"] = self.dataset["validation"]
+            split_dict = self.dataset["train"].train_test_split(test_size=0.1, seed=42)
+            self.dataset["train"] = split_dict["train"]
+            self.dataset["validation"] = split_dict["test"]
+
+        # self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
+        # self.vocab_to_ids()
+        # for split in self.dataset.keys():
+        #     self.dataset[split] = self.dataset[split].map(
+        #         self.convert_to_features,
+        #         batched=True,
+        #         remove_columns=[self.task_label_field_map[self.task_name][0]],
+        #     )
+        #     self.columns = [
+        #         c
+        #         for c in self.dataset[split].column_names
+        #         if c in self.loader_columns
+        #     ]
+
+        #     self.dataset[split].set_format(type="torch", columns=self.columns)
  
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
 
@@ -240,6 +242,7 @@ class DataModule(pl.LightningDataModule):
         else:
             texts_or_text_pairs = example_batch[self.text_fields[0]]
 
+        # texts_or_text_pairs: list of sentences
         # Tokenize the text/text pairs
         if self.task_name != 'ner':
             features = self.tokenizer.batch_encode_plus(
@@ -252,8 +255,8 @@ class DataModule(pl.LightningDataModule):
         else:
             max_length = self.max_seq_length
             input_ids = []
-            sentence = []
             for i in range(len(texts_or_text_pairs)):
+                sentence = []
                 for j in range(len(texts_or_text_pairs[i])):
                     id = self.v_t_ids.get(texts_or_text_pairs[i][j].lower())
                     if id is not None:

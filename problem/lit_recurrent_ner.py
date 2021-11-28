@@ -85,15 +85,14 @@ class LightningRecurrent_NER(pl.LightningModule):
         labels = None
         if "labels" in inputs:
             labels = inputs.pop("labels")
-        print('******************************************')
-        print('Input shape: ', inputs['input_ids'].shape)
+
         x = self.embed(**inputs)
-        print('Input embeded shape: ', x.shape)
-        print('******************************************')
+
         # return
 
         # if x.isnan().any():
         #     raise NanException(f"NaN after embeds")
+        print('Input of RNN: ',x)
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
         # if x.isnan().any():
@@ -104,6 +103,9 @@ class LightningRecurrent_NER(pl.LightningModule):
         #     raise NanException(f"NaN after CLS head")
         loss = None
         if labels is not None:
+            for label_index in range(len(labels)):
+                labels[label_index] = nn.functional.one_hot(labels[label_index].to(torch.int64),4).to(torch.float32)
+            
             if self.num_labels == 1:
                 #  We are doing regression
                 loss_fct = nn.MSELoss()

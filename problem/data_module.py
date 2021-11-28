@@ -267,7 +267,7 @@ class DataModule(pl.LightningDataModule):
                 input_ids.append(sentence)
 
             features = {}
-            features['input_ids'] = input_ids
+            features['input_ids'] = input_ids.to(torch.int64)
  
 
         # Rename label to labels to make it easier to pass to model forward

@@ -70,7 +70,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         recurrent_model = RecurrentNet(
             cells,
             adfs,
-            128,
+            self.embed.embed_dim,
             self.hparams.hidden_size,
             num_layers=self.hparams.num_layers,
             batch_first=self.hparams.batch_first,
@@ -398,33 +398,3 @@ class GloveEmbedding(nn.Module):
         
         x = self.token_emb(input_ids)
         return x 
-
-# from datasets import load_dataset
-# import tensorflow as tf
-# from collections import OrderedDict
-
-
-# def get_vocab(conll_data):
-#     all_tokens = sum(conll_data["train"]["tokens"], [])
-#     all_tokens_array = np.array(list(map(str.lower, all_tokens)))
-
-#     counter = Counter(all_tokens_array)
-
-#     vocab_size = len(counter)
-
-#     vocabulary = [token for token, count in counter.most_common(vocab_size - 2)]
-#     return vocabulary
-
-# import os
-# par_root = os.path.abspath('..')
-# root = os.getcwd()
-# glove_dir = os.path.join(par_root, 'glove/glove.6B.200d.txt')
-# conll_data = load_dataset("conll2003")
-
-# glove_test = GloveEmbedding(glove_dir = glove_dir, vocab = get_vocab(conll_data))
-
-# # print(glove_test.embedding_matrix.shape)
-# input = torch.LongTensor([1,0,1])
-# print(input)
-# with torch.no_grad():
-#     print(glove_test.forward(input))

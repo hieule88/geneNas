@@ -151,6 +151,8 @@ class RecurrentNet(nn.Module):
                 )
                 for _ in range(self.num_mains)
             ]
+            print('Hidden size: ', self.hidden_size)
+            print('Hidden States: ',hidden_states)
             hidden_states = [states.type_as(x) for states in hidden_states]
 
         new_hidden_states = [[] for _ in range(self.num_mains)]

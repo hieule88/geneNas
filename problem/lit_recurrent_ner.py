@@ -85,8 +85,11 @@ class LightningRecurrent_NER(pl.LightningModule):
         labels = None
         if "labels" in inputs:
             labels = inputs.pop("labels")
-
+        print('******************************************')
+        print('Input shape: ', inputs['input_ids'].shape)
         x = self.embed(**inputs)
+        print('Input embeded shape: ', x.shape)
+        print('******************************************')
         # return
 
         # if x.isnan().any():

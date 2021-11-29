@@ -321,11 +321,14 @@ class ClsHead(nn.Module):
 
     def forward(self, x, **kwargs):
         x = self.dropout(x)
-        x = self.ff(x)
+        # x = self.ff(x)
+        x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
-        x = self.timeDistributed(x)
-        x = self.softmax(x)
+        # x = self.timeDistributed(x)
+        x = self.out_proj(x)
+        # x = self.softmax(x)
+        x = nn.functional.softmax(x, dim=-1)
         return x
 
     def reset_parameters(self):

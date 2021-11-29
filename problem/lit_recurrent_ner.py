@@ -85,14 +85,13 @@ class LightningRecurrent_NER(pl.LightningModule):
         labels = None
         if "labels" in inputs:
             labels = inputs.pop("labels")
-
+        
         x = self.embed(**inputs)
 
         # return
 
         # if x.isnan().any():
         #     raise NanException(f"NaN after embeds")
-        print('Input of RNN: ',x)
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
         # if x.isnan().any():
@@ -103,8 +102,8 @@ class LightningRecurrent_NER(pl.LightningModule):
         #     raise NanException(f"NaN after CLS head")
         loss = None
         if labels is not None:
-            for label_index in range(len(labels)):
-                labels[label_index] = nn.functional.one_hot(labels[label_index].to(torch.int64),4).to(torch.float32)
+
+            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
             
             if self.num_labels == 1:
                 #  We are doing regression
@@ -112,7 +111,7 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits, labels)
         return loss, logits, hiddens
 
     def training_step(self, batch, batch_idx, hiddens=None):
@@ -190,6 +189,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         if np.all(preds == preds[0]):
             metrics = {self.metric.name: 0}
         else:
+
             metrics = self.metric.compute(predictions=preds, references=labels)
         self.log_dict(metrics, prog_bar=True)
         log_data = {

@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import datasets
+from tensorflow.python.keras.utils.np_utils import to_categorical
 import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
 import pytorch_lightning as pl
@@ -7,6 +8,7 @@ from transformers import AutoTokenizer, AutoModel
 from sklearn.model_selection import KFold, train_test_split
 import numpy as np
 from collections import Counter
+from numpy import array
 
 class DataModule(pl.LightningDataModule):
 
@@ -261,13 +263,13 @@ class DataModule(pl.LightningDataModule):
                     if id is not None:
                         sentence.append(id)
                     else :
-                        sentence.append(self.len_vocab)
+                        sentence.append(self.len_vocab-1)
                 for j in range(len(texts_or_text_pairs[i]), max_length):
                     sentence.append(0)
                 input_ids.append(sentence)
 
             features = {}
-            features['input_ids'] = input_ids.to(torch.int64)
+            features['input_ids'] = input_ids
  
 
         # Rename label to labels to make it easier to pass to model forward
@@ -276,6 +278,8 @@ class DataModule(pl.LightningDataModule):
             tmp_label = [0 for i in range(self.max_seq_length)]
             tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
             features["labels"][label_index] = tmp_label
+        features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)
+
         return features
 
     def kfold(self, k_folds=10, seed=420):

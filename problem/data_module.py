@@ -157,11 +157,11 @@ class DataModule(pl.LightningDataModule):
  
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
 
-    def prepare_data(self):
-        if not self.cache_dataset:
-            datasets.load_dataset(*self.dataset_names[self.task_name])
-        AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
-        AutoModel.from_pretrained(self.model_name_or_path)
+    # def prepare_data(self):
+    #     if not self.cache_dataset:
+    #         datasets.load_dataset(*self.dataset_names[self.task_name])
+    #     AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
+    #     AutoModel.from_pretrained(self.model_name_or_path)
 
     def train_dataloader(self):
         return DataLoader(

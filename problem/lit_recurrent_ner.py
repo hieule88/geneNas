@@ -153,15 +153,22 @@ class LightningRecurrent_NER(pl.LightningModule):
         val_loss, logits, _ = self(None, **batch)
 
         if self.hparams.num_labels >= 1:
-            preds = torch.argmax(logits, dim=1)
+            preds = torch.argmax(logits, dim=-1)
+            # preds = logits
         elif self.hparams.num_labels == 1:
             preds = logits.squeeze()
 
         labels = batch["labels"]
-
+                
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
+
+        # print(len(outputs))
+        # print('Labels: ',outputs[0]['labels'].shape)
+        # print('Preds: ',outputs[0]['preds'].shape)
+
+        
         if self.num_val_dataloader > 1:
             for i, output in enumerate(outputs):
                 # matched or mismatched
@@ -189,11 +196,16 @@ class LightningRecurrent_NER(pl.LightningModule):
         labels = torch.cat([x["labels"] for x in outputs]).detach().cpu().numpy()
         loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
+
         if np.all(preds == preds[0]):
             metrics = {self.metric.name: 0}
         else:
-
-            metrics = self.metric.compute(predictions=preds, references=labels)
+            sum_metrics =0.0
+            for label_index in range(len(labels)):
+                metrics = self.metric.compute(predictions=preds[label_index], references=labels[label_index])
+                sum_metrics = sum_metrics + metrics['accuracy']
+            metrics = {}
+            metrics['accuracy'] = sum_metrics/len(labels)
         self.log_dict(metrics, prog_bar=True)
         log_data = {
             f"val_loss": loss.item(),

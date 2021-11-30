@@ -278,7 +278,7 @@ class DataModule(pl.LightningDataModule):
             tmp_label = [0 for i in range(self.max_seq_length)]
             tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
             features["labels"][label_index] = tmp_label
-        features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)
+        # features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)
 
         return features
 

@@ -17,6 +17,9 @@ from collections import Counter
 import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
+from tensorflow.python.keras.utils.np_utils import to_categorical
+from numpy import array 
+
 class LightningRecurrent_NER(pl.LightningModule):
     def __init__(
         self,
@@ -103,7 +106,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         loss = None
         if labels is not None:
 
-            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
+            labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
             
             if self.num_labels == 1:
                 #  We are doing regression

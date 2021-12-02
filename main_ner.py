@@ -6,7 +6,7 @@ from problem import DataModule
 from problem.lit_recurrent_ner import LightningRecurrent_NER
 from problem.ner_problem import NERProblem
 from evolution import Optimizer
-
+import time
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -48,6 +48,7 @@ def main():
 
     optimizer = Optimizer(args)
     print('Run')
+
     population, objs = optimizer.ga(problem)
 
     for i, idv in enumerate(population):

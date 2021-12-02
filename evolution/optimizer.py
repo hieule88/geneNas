@@ -3,15 +3,16 @@ import numpy as np
 import pickle
 from datetime import datetime
 import os
+import time
 
 from .operator import Operator, MultiObjectiveOperator
 
 
 class Optimizer:
     def __init__(self, args):
-        self.D = args.chromosome_length
-        self.N = args.popsize
-        self.T = args.num_iter
+        self.D = args.chromosome_length # size of a chromosome
+        self.N = args.popsize # size of a population
+        self.T = args.num_iter # number of generations 
         self.operator = Operator(None, None)
         self.save_dict_path = args.save_dict_path
 
@@ -43,6 +44,9 @@ class Optimizer:
 
         for t in range(start_generation, self.T):
             print(f"\nGENERATION: {t}\n")
+
+            start_time = time.time()
+
             # reproduction
             offspring = self.operator.uniform_crossover(population)
             offspring = self.operator.mutate(offspring)
@@ -59,6 +63,10 @@ class Optimizer:
 
             # save checkpoint
             Optimizer.save_checkpoint(t, population, fitness, self.save_dict_path)
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print ("THIS GENERATION TOOK : {0}".format(elapsed_time) + "[sec]")
 
         # output
         if return_best:

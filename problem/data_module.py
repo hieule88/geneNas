@@ -115,29 +115,6 @@ class DataModule(pl.LightningDataModule):
         # self.max_seq_length = self.tokenizer.model_max_length
 
     def setup(self, stage):
-        # if not self.cache_dataset:
-        #     self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
-
-        #     for split in self.dataset.keys():
-        #         self.dataset[split] = self.dataset[split].map(
-        #             self.convert_to_features,
-        #             batched=True,
-        #             remove_columns=[self.task_label_field_map[self.task_name][0]],
-        #         )
-        #         self.columns = [
-        #             c
-        #             for c in self.dataset[split].column_names
-        #             if c in self.loader_columns
-        #         ]
-        #         self.dataset[split].set_format(type="torch", columns=self.columns)
-        # else:
-        #     # if self.task_name == 'ner':
-        #     #     pass
-        #     if self.task_name in ["cola", "sst2"]:
-        #         self.dataset["test"] = self.dataset["validation"]
-        #     split_dict = self.dataset["train"].train_test_split(test_size=0.1, seed=42)
-        #     self.dataset["train"] = split_dict["train"]
-        #     self.dataset["validation"] = split_dict["test"]
         if not self.cache_dataset:
             self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
             self.vocab_to_ids()
@@ -163,12 +140,6 @@ class DataModule(pl.LightningDataModule):
             self.dataset["validation"] = split_dict["test"]
 
         self.eval_splits = [x for x in self.dataset.keys() if "validation" in x]
-
-    # def prepare_data(self):
-    #     if not self.cache_dataset:
-    #         datasets.load_dataset(*self.dataset_names[self.task_name])
-    #     AutoTokenizer.from_pretrained(self.model_name_or_path, use_fast=True)
-    #     AutoModel.from_pretrained(self.model_name_or_path)
 
     def train_dataloader(self):
         return DataLoader(
@@ -260,9 +231,11 @@ class DataModule(pl.LightningDataModule):
             )
         
         else:
+
             max_length = self.max_seq_length
             input_ids = []
-            
+            # masking = []
+
             for i in range(len(texts_or_text_pairs)):
                 sentence = []
                 for j in range(len(texts_or_text_pairs[i])):
@@ -272,8 +245,9 @@ class DataModule(pl.LightningDataModule):
                     else :
                         sentence.append(self.len_vocab-1)
                 for j in range(len(texts_or_text_pairs[i]), max_length):
-                    sentence.append(0)
+                    sentence.append(9)
                 input_ids.append(sentence)
+                # masking.append(len(texts_or_text_pairs[i]))
 
             features = {}
             features['input_ids'] = input_ids

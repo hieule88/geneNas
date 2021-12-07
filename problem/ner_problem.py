@@ -16,6 +16,9 @@ from network import RecurrentNet
 from util.logger import ChromosomeLogger
 from util.exception import NanException
 
+from typing import List, Tuple
+from evolution import GeneType
+
 class NERProblem(Problem):
     def __init__(self, args):
         super().__init__(args)
@@ -98,7 +101,7 @@ class NERProblem(Problem):
             glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
         )
         try:
-            trainer.fit(glue_pl, self.dm)
+            # trainer.fit(glue_pl, self.dm)
             trainer.test(glue_pl, test_dataloaders=self.dm.test_dataloader())
         except NanException as e:
             print(e)

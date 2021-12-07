@@ -41,12 +41,13 @@ def main():
 
     # solve problems
     problem = NERProblem(args)
-    problem.progress_bar = 10
+    # problem.progress_bar = 10
     problem.weights_summary = "top"
     if args.early_stop > 0:
         problem.early_stop = args.early_stop
 
     optimizer = Optimizer(args)
+
     print('Run')
 
     population, objs = optimizer.ga(problem)

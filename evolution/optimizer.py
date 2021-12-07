@@ -23,6 +23,7 @@ class Optimizer:
         self.operator.lb = lb
         self.operator.ub = ub
 
+
         if self.save_dict_path is None:
             today = datetime.today().strftime("%Y-%m-%d")
             self.save_dict_path = f"{taskname}.gene_nas.{today}.pkl"

@@ -245,7 +245,7 @@ class DataModule(pl.LightningDataModule):
                     else :
                         sentence.append(self.len_vocab-1)
                 for j in range(len(texts_or_text_pairs[i]), max_length):
-                    sentence.append(9)
+                    sentence.append(0)
                 input_ids.append(sentence)
                 # masking.append(len(texts_or_text_pairs[i]))
 
@@ -256,7 +256,7 @@ class DataModule(pl.LightningDataModule):
         # Rename label to labels to make it easier to pass to model forward
         features["labels"] = example_batch[self.task_label_field_map[self.task_name][0]]
         for label_index in range(len(features["labels"])):
-            tmp_label = [0 for i in range(self.max_seq_length)]
+            tmp_label = [9 for i in range(self.max_seq_length)]
             tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
             features["labels"][label_index] = tmp_label
         # features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)

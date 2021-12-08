@@ -23,3 +23,7 @@
 #     avg_loss = loss(each_input, each_target)
 #     print(avg_loss)
 # print(avg_loss/2)
+
+a = ['a','b','c']
+dicf = {i : 0 for i in a}
+print(dicf)

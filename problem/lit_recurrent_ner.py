@@ -115,11 +115,10 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss = 0
-                loss_fct = nn.CrossEntropyLoss()
-                for i in range(len(labels)):
-                    len_label = labels[i][-1]
-                    loss = loss + loss_fct(logits[i][:len_label, :], labels[i][:len_label])
-                loss = loss / len(labels)
+                loss_fct = nn.CrossEntropyLoss(ignore_index= 9)
+
+                loss = loss_fct(logits.view(-1, logits.size(-1)), labels[:,:128].view(-1))
+
         return loss, logits, hiddens
 
     def training_step(self, batch, batch_idx, hiddens=None):
@@ -212,6 +211,12 @@ class LightningRecurrent_NER(pl.LightningModule):
                 sum_metrics = sum_metrics + metrics['accuracy']
             metrics = {}
             metrics['accuracy'] = sum_metrics/len(labels)
+
+            metrics['f1'] = 0
+            metrics['recall'] = 0
+            metrics['precision'] = 0
+
+
         self.log_dict(metrics, prog_bar=True)
         log_data = {
             f"val_loss": loss.item(),

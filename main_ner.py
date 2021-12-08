@@ -51,12 +51,18 @@ def main():
     print('Run')
 
     population, objs = optimizer.ga(problem)
+    import ast
 
-    for i, idv in enumerate(population):
-        symbols, _, _ = problem.replace_value_with_symbol(population[i])
-        print(f"Individual {i + 1}: {objs[i]}, chromosome: {symbols}")
-        problem.make_graph(idv, prefix=f"{args.task_name}.idv_{i+1}")
+    # chromosome = ast.literal_eval(population)
+    # print(chromosome)
 
+    # chromosome = ast.literal_eval(population)
+    symbols, _, _ = problem.replace_value_with_symbol(population)
+    print(f"Best Individual: {objs}, chromosome: {symbols}")
+    problem.make_graph(population, prefix=f"{args.task_name}.idv_0")
+    
+    # chromosome = [int(x) for x in chromosome]
+    problem.evaluate(population)
 
 if __name__ == "__main__":
     main()

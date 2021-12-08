@@ -38,7 +38,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": 2,
         "trec": 6,
         "twitter": 3,
-        "ner": 10,
+        "ner": 9,
         # "health_fact": 5,
     }
 

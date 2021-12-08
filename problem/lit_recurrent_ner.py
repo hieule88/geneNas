@@ -106,15 +106,20 @@ class LightningRecurrent_NER(pl.LightningModule):
         loss = None
         if labels is not None:
 
-            labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
-            
+            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
+            # labels = torch.Tensor(labels)
+
             if self.num_labels == 1:
                 #  We are doing regression
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
+                loss = 0
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits, labels)
+                for i in range(len(labels)):
+                    len_label = labels[i][-1]
+                    loss = loss + loss_fct(logits[i][:len_label, :], labels[i][:len_label])
+                loss = loss / len(labels)
         return loss, logits, hiddens
 
     def training_step(self, batch, batch_idx, hiddens=None):
@@ -202,7 +207,8 @@ class LightningRecurrent_NER(pl.LightningModule):
         else:
             sum_metrics =0.0
             for label_index in range(len(labels)):
-                metrics = self.metric.compute(predictions=preds[label_index], references=labels[label_index])
+                len_label = labels[label_index][-1]
+                metrics = self.metric.compute(predictions=preds[label_index][:len_label], references=labels[label_index][:len_label])
                 sum_metrics = sum_metrics + metrics['accuracy']
             metrics = {}
             metrics['accuracy'] = sum_metrics/len(labels)

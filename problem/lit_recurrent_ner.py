@@ -19,6 +19,7 @@ from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import T
 
 from tensorflow.python.keras.utils.np_utils import to_categorical
 from numpy import array 
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 class LightningRecurrent_NER(pl.LightningModule):
     def __init__(
@@ -205,18 +206,14 @@ class LightningRecurrent_NER(pl.LightningModule):
         if np.all(preds == preds[0]):
             metrics = {self.metric.name: 0}
         else:
-            sum_metrics =0.0
-            for label_index in range(len(labels)):
-                len_label = labels[label_index][-1]
-                metrics = self.metric.compute(predictions=preds[label_index][:len_label], references=labels[label_index][:len_label])
-                sum_metrics = sum_metrics + metrics['accuracy']
+            preds = [i for j in range(len(preds)) for i in preds[j][:labels[j][-1]] ]
+            labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
+
             metrics = {}
-            metrics['accuracy'] = sum_metrics/len(labels)
-
-            metrics['f1'] = 0
-            metrics['recall'] = 0
-            metrics['precision'] = 0
-
+            metrics['accuracy'] = self.metric.compute(predictions=preds, references=labels)['accuracy']
+            metrics['f1'] = f1_score(labels, preds, average='micro')
+            metrics['recall'] = recall_score(labels, preds, average='micro')
+            metrics['precision'] = precision_score(labels, preds, average='micro')
 
         self.log_dict(metrics, prog_bar=True)
         log_data = {

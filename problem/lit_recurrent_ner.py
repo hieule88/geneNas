@@ -117,6 +117,11 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss = 0
                 loss_fct = nn.CrossEntropyLoss(ignore_index= 9)
 
+                print('Logit before reshape',logits)
+                print('Logit after reshape',logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])))
+                print('Labels before reshape',labels)
+                print('Labels after reshape',logits.reshape((labels[:,:128].shape[0]*labels[:,:128].shape[1], labels[:,:128].shape[2])))
+
                 loss = loss_fct(logits.view(-1, logits.size(-1)), labels[:,:128].view(-1))
 
         return loss, logits, hiddens

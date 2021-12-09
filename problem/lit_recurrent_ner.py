@@ -115,7 +115,6 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss = 0
                 loss_fct = nn.CrossEntropyLoss(ignore_index= 9)
 
                 loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
@@ -170,11 +169,6 @@ class LightningRecurrent_NER(pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
 
-        # print(len(outputs))
-        # print('Labels: ',outputs[0]['labels'].shape)
-        # print('Preds: ',outputs[0]['preds'].shape)
-
-        
         if self.num_val_dataloader > 1:
             for i, output in enumerate(outputs):
                 # matched or mismatched

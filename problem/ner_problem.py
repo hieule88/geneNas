@@ -99,14 +99,14 @@ class NERProblem(Problem):
 
     def evaluate(self, chromosome: np.array):
         glue_pl, trainer = self.setup_model_trainer(chromosome)
-        # self.lr_finder(
-        #     glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
-        # )
+#       self.lr_finder(
+#           glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
+#       )
         try:
             trainer.fit(glue_pl, self.dm)
             trainer.test(glue_pl, test_dataloaders=self.dm.test_dataloader())
         except NanException as e:
-            print(e)
+            # print(e)
             log_data = {
                 f"val_loss": 0.0,
                 "metrics": {"accuracy": 0.0, "f1": 0.0},

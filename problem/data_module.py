@@ -288,7 +288,7 @@ class DataModule(pl.LightningDataModule):
             ),
 
     def load_cache_dataset(self, cached_dataset_filepath):
-        print(f"Load cached dataset {cached_dataset_filepath}")
+        # print(f"Load cached dataset {cached_dataset_filepath}")
         self.dataset = torch.load(cached_dataset_filepath)
 
     @staticmethod

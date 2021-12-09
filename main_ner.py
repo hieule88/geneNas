@@ -6,7 +6,6 @@ from problem import DataModule
 from problem.lit_recurrent_ner import LightningRecurrent_NER
 from problem.ner_problem import NERProblem
 from evolution import Optimizer
-import time
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -51,10 +50,6 @@ def main():
     print('Run')
 
     population, objs = optimizer.ga(problem)
-    import ast
-
-    # chromosome = ast.literal_eval(population)
-    # print(chromosome)
 
     # chromosome = ast.literal_eval(population)
     symbols, _, _ = problem.replace_value_with_symbol(population)

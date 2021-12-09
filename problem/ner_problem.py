@@ -77,6 +77,8 @@ class NERProblem(Problem):
             weights_summary=self.weights_summary,
             checkpoint_callback=False,
             callbacks=early_stop,
+            limit_train_batches=0, 
+            limit_val_batches=0,
         )
         return trainer
 
@@ -97,11 +99,11 @@ class NERProblem(Problem):
 
     def evaluate(self, chromosome: np.array):
         glue_pl, trainer = self.setup_model_trainer(chromosome)
-        self.lr_finder(
-            glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
-        )
+        # self.lr_finder(
+        #     glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
+        # )
         try:
-            # trainer.fit(glue_pl, self.dm)
+            trainer.fit(glue_pl, self.dm)
             trainer.test(glue_pl, test_dataloaders=self.dm.test_dataloader())
         except NanException as e:
             print(e)

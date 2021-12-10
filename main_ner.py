@@ -6,6 +6,8 @@ from problem import DataModule
 from problem.lit_recurrent_ner import LightningRecurrent_NER
 from problem.ner_problem import NERProblem
 from evolution import Optimizer
+import warnings
+warnings.filterwarnings("ignore")
 
 def parse_args():
     parser = argparse.ArgumentParser()

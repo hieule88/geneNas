@@ -43,10 +43,15 @@ class Optimizer:
                 f"LOAD FROM CHECKPOINT {self.save_dict_path} AT GENERATION {start_generation}"
             )
 
-        for t in range(start_generation, self.T):
-            print(f"\nGENERATION: {t}\n")
-
-            start_time = time.time()
+        # for t in range(start_generation, self.T):
+        if self.T > 3600:
+            t = time.time()
+        else:
+            t = start_generation
+        end_time = t
+        cnt = t
+        while (end_time - t < self.T):
+            print(f"\nGENERATION: {cnt}\n")
 
             # reproduction
             offspring = self.operator.uniform_crossover(population)
@@ -63,11 +68,15 @@ class Optimizer:
             )
 
             # save checkpoint
-            Optimizer.save_checkpoint(t, population, fitness, self.save_dict_path)
+            cnt = cnt + 1
+            if (self.T > 3600):
+                end_time = time.time()
+            else:
+                end_time = end_time +1
+            Optimizer.save_checkpoint(cnt, population, fitness, self.save_dict_path)
 
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            print ("THIS GENERATION TOOK : {0}".format(elapsed_time) + "[sec]")
+            # elapsed_time = end_time - start_time
+            # print ("THIS GENERATION TOOK : {0}".format(elapsed_time) + "[sec]")
 
         # output
         if return_best:

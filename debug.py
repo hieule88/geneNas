@@ -24,3 +24,10 @@
 # metrics['precision'] = precision_score(labels, preds, average='micro')
 
 # print(metrics)
+
+# b = {1:'a',2:'b',3:'c'}
+# a = b
+
+# a[4] = 'c'
+# print(a)
+# print(b)

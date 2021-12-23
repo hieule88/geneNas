@@ -49,7 +49,7 @@ class Optimizer:
         else:
             t = start_generation
         end_time = t
-        cnt = t
+        cnt = start_generation
         while (end_time - t < self.T):
             print(f"\nGENERATION: {cnt}\n")
 

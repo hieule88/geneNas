@@ -20,6 +20,8 @@ from typing import List, Tuple
 from evolution import GeneType
 
 from torch.utils.data import DataLoader
+import warnings
+warnings.filterwarnings("ignore")
 
 class NERProblemTrain(Problem):
     def __init__(self, args):
@@ -102,14 +104,15 @@ class NERProblemTrain(Problem):
 
     def train(self, model):
         trainer = self.setup_trainer()
-        train_dataloader = DataLoader(self.dm.dataset['train'], batch_size= self.train_batch_size, shuffle= True)
-        val_dataloader = DataLoader(self.dm.dataset['validation'], batch_size= self.val_batch_size)
+        train_dataloader = DataLoader(self.dm.dataset['train'], batch_size= self.hparams.train_batch_size, shuffle= True, num_workers= self.hparams.num_workers)
+        val_dataloader = DataLoader(self.dm.dataset['validation'], batch_size= self.hparams.eval_batch_size, num_workers= self.hparams.num_workers)
         self.lr_finder(model, trainer, train_dataloader, val_dataloader)
         trainer.fit(
             model, 
             train_dataloaders= train_dataloader,
             val_dataloaders= val_dataloader,
         )
+        print(self.chromsome_logger.logs[-1]["data"][-1])
 
     def evaluate(self, chromosome: np.array):
         print(chromosome)
@@ -119,4 +122,4 @@ class NERProblemTrain(Problem):
         glue_pl = self.setup_model(chromosome)
         self.train(glue_pl)
         
-        self.trainer.save_checkpoint(self.save_path)
+        glue_pl.trainer.save_checkpoint(self.save_path)

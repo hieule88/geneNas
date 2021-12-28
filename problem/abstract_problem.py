@@ -125,7 +125,7 @@ class Problem(ABC):
         parser.add_argument("--num_adf", default=2, type=int)
         parser.add_argument("--h_main", default=4, type=int)
         parser.add_argument("--h_adf", default=3, type=int)
-        parser.add_argument("--max_epochs", default=20, type=int)
+
         # parser.add_argument("--num_terminal", default=2, type=int)
         parser.add_argument("--max_arity", default=3, type=int)
 

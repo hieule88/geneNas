@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 import argparse
 import pytorch_lightning as pl
-from problem import CV_DataModule_train, CV_Problem_MultiObjTrain, NasgepNet_multiObj
+from problem import DataModule, NERProblemTrain, LightningRecurrent_NERTrain
 import numpy as np
 import pickle
 
@@ -25,26 +25,21 @@ def input_chromosome(args):
         chromosome = chromosome.split()
         chromosome = [int(x) for x in chromosome]
         return np.array(chromosome)
-        
     except:
         return np.array(chromosome)
-
-
-    
-
 
 def parse_args():
     parser = argparse.ArgumentParser()
 
     parser = pl.Trainer.add_argparse_args(parser)
-    parser = CV_DataModule_train.add_argparse_args(parser)
-    parser = CV_DataModule_train.add_cache_arguments(parser)
+    parser = DataModule.add_argparse_args(parser)
+    parser = DataModule.add_cache_arguments(parser)
     parser.add_argument("--file_name", default= '/chromosome.txt', type=str)
     parser.add_argument("--checkpoint_file", default= '/checkpoint.pkl', type=str)
     parser.add_argument("--save_path", default = path + f"chromosome_trained_weights.gene_nas.{today}.pkl", type= str)
-    parser = CV_Problem_MultiObjTrain.add_arguments(parser)
-    parser = NasgepNet_multiObj.add_model_specific_args(parser)
-    parser = NasgepNet_multiObj.add_learning_specific_args(parser)
+    parser = NERProblemTrain.add_arguments(parser)
+    parser = LightningRecurrent_NERTrain.add_model_specific_args(parser)
+    parser = LightningRecurrent_NERTrain.add_learning_specific_args(parser)
     args = parser.parse_args()
 
     args.num_terminal = args.num_main + 1
@@ -60,15 +55,12 @@ def parse_args():
 
     return args
 
-
         
 def main():
     args = parse_args()
     chromosome = input_chromosome(args)
-    problem = CV_Problem_MultiObjTrain(args= args)
-    problem.evaluate(chromosome= chromosome)
-    
-    
+    problem = NERProblemTrain(args= args)
+    problem.evaluate(chromosome= chromosome)    
 
 if __name__ == "__main__":
     main()

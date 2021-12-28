@@ -256,7 +256,7 @@ class DataModule(pl.LightningDataModule):
         # Rename label to labels to make it easier to pass to model forward
         features["labels"] = example_batch[self.task_label_field_map[self.task_name][0]]
         for label_index in range(len(features["labels"])):
-            tmp_label = [9 for i in range(self.max_seq_length + 1)]
+            tmp_label = [-2 for i in range(self.max_seq_length + 1)]
             tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
             tmp_label[self.max_seq_length] = len(features["labels"][label_index])
             features["labels"][label_index] = tmp_label

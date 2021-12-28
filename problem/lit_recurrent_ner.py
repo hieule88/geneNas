@@ -26,6 +26,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         self,
         model_name_or_path: str,
         vocab,
+        max_sequence_length,
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
@@ -44,14 +45,10 @@ class LightningRecurrent_NER(pl.LightningModule):
         super().__init__()
 
         self.save_hyperparameters()
-
+        self.max_sequence_length = max_sequence_length
         self.num_labels = num_labels
         self.num_val_dataloader = num_val_dataloader
 
-        # self.config = AutoConfig.from_pretrained(
-        #     model_name_or_path, num_labels=num_labels
-        # )
-        # self.embed = AutoModel.from_pretrained(model_name_or_path, config=self.config)
         self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = vocab)
         if unfreeze_embed:
             for param in self.embed.parameters():
@@ -92,21 +89,16 @@ class LightningRecurrent_NER(pl.LightningModule):
         
         x = self.embed(**inputs)
 
-        # return
-
         # if x.isnan().any():
         #     raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
-        # if x.isnan().any():
-        #     raise NanException(f"NaN after recurrent")
 
         logits = self.cls_head(x)
         # if logits.isnan().any():
         #     raise NanException(f"NaN after CLS head")
         loss = None
         if labels is not None:
-
             # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
             # labels = torch.Tensor(labels)
 
@@ -115,10 +107,11 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss_fct = nn.CrossEntropyLoss(ignore_index= 9)
+                loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
                 loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
-                                                labels[:,:128].reshape((labels[:,:128].shape[0]*labels[:,:128].shape[1])))
+                                                labels[:,:self.max_sequence_length].reshape\
+                                                ((labels[:,:self.max_sequence_length].shape[0]*labels[:,:self.max_sequence_length].shape[1])))
 
         return loss, logits, hiddens
 
@@ -313,17 +306,6 @@ class LightningRecurrent_NER(pl.LightningModule):
         parser.add_argument("--unfreeze_embed", action="store_false")
         parser.add_argument("--use_simple_cls", action="store_true")
         return parser
-
-
-# class CustomNonPaddingTokenLoss(nn.CrossEntropyLoss()):
-#     def __init__(self):
-#         super().__init__()
-
-#     def call(self, y_true, y_pred):
-#         loss = self(y_true, y_pred)
-#         mask = tf.cast((y_true > 0), dtype=tf.float32)
-#         loss = loss * mask
-#         return tf.reduce_sum(loss) / tf.reduce_sum(mask)
 
 class ClsHead(nn.Module):
     """Head for sentence-level classification tasks."""

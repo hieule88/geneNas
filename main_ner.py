@@ -15,10 +15,10 @@ def parse_args():
     parser = pl.Trainer.add_argparse_args(parser)
     parser = DataModule.add_argparse_args(parser)
     parser = DataModule.add_cache_arguments(parser)
-    parser = Optimizer.add_optimizer_specific_args(parser)
     parser = LightningRecurrent_NER.add_model_specific_args(parser)
+    parser = LightningRecurrent_NER.add_learning_specific_args(parser)
+    parser = Optimizer.add_optimizer_specific_args(parser)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--early_stop", type=int, default=0)
 
     args = parser.parse_args()
 
@@ -44,8 +44,6 @@ def main():
     problem = NERProblem(args)
     # problem.progress_bar = 10
     problem.weights_summary = "top"
-    if args.early_stop > 0:
-        problem.early_stop = args.early_stop
 
     optimizer = Optimizer(args)
 

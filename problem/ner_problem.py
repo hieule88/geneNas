@@ -87,6 +87,7 @@ class NERProblem(Problem):
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
         glue_pl = LightningRecurrent_NER(
+            max_sequence_length= self.dm.max_seq_length,
             vocab= self.dm.vocabulary,
             num_labels=self.dm.num_labels,
             eval_splits=self.dm.eval_splits,

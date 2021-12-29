@@ -6,7 +6,8 @@ import os
 import time
 
 from .operator import Operator, MultiObjectiveOperator
-
+import warnings
+warnings.filterwarnings("ignore")
 
 class Optimizer:
     def __init__(self, args):
@@ -49,7 +50,7 @@ class Optimizer:
         else:
             t = start_generation
         end_time = t
-        cnt = t
+        cnt = start_generation
         while (end_time - t < self.T):
             print(f"\nGENERATION: {cnt}\n")
 

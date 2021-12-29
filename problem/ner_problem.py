@@ -87,6 +87,7 @@ class NERProblem(Problem):
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
         glue_pl = LightningRecurrent_NER(
+            max_sequence_length= self.dm.max_seq_length,
             vocab= self.dm.vocabulary,
             num_labels=self.dm.num_labels,
             eval_splits=self.dm.eval_splits,
@@ -99,12 +100,10 @@ class NERProblem(Problem):
 
     def evaluate(self, chromosome: np.array):
         glue_pl, trainer = self.setup_model_trainer(chromosome)
-#       self.lr_finder(
-#           glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
-#       )
         try:
             trainer.fit(glue_pl, self.dm)
             trainer.test(glue_pl, test_dataloaders=self.dm.test_dataloader())
+
         except NanException as e:
             # print(e)
             log_data = {

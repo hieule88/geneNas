@@ -26,6 +26,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         self,
         model_name_or_path: str,
         vocab,
+        max_sequence_length,
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
@@ -44,14 +45,10 @@ class LightningRecurrent_NER(pl.LightningModule):
         super().__init__()
 
         self.save_hyperparameters()
-
+        self.max_sequence_length = max_sequence_length
         self.num_labels = num_labels
         self.num_val_dataloader = num_val_dataloader
 
-        # self.config = AutoConfig.from_pretrained(
-        #     model_name_or_path, num_labels=num_labels
-        # )
-        # self.embed = AutoModel.from_pretrained(model_name_or_path, config=self.config)
         self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = vocab)
         if unfreeze_embed:
             for param in self.embed.parameters():
@@ -88,25 +85,22 @@ class LightningRecurrent_NER(pl.LightningModule):
     def forward(self, hiddens, **inputs):
         labels = None
         if "labels" in inputs:
-            labels = inputs.pop("labels")
+            labels = inputs.pop("labels")[:,:self.max_sequence_length]
         
         x = self.embed(**inputs)
 
-        # return
-
-        # if x.isnan().any():
-        #     raise NanException(f"NaN after embeds")
+        if x.isnan().any():
+            raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
-        # if x.isnan().any():
-        #     raise NanException(f"NaN after recurrent")
+        if x.isnan().any():
+            raise NanException(f"NaN after RNN")
 
         logits = self.cls_head(x)
-        # if logits.isnan().any():
-        #     raise NanException(f"NaN after CLS head")
+        if logits.isnan().any():
+            raise NanException(f"NaN after CLS head")
         loss = None
         if labels is not None:
-
             # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
             # labels = torch.Tensor(labels)
 
@@ -115,10 +109,10 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss_fct = nn.CrossEntropyLoss(ignore_index= 9)
+                loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
                 loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
-                                                labels[:,:128].reshape((labels[:,:128].shape[0]*labels[:,:128].shape[1])))
+                                                labels.reshape((labels.shape[0]*labels.shape[1])))
 
         return loss, logits, hiddens
 
@@ -156,7 +150,6 @@ class LightningRecurrent_NER(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         val_loss, logits, _ = self(None, **batch)
-
         if self.hparams.num_labels >= 1:
             preds = torch.argmax(logits, dim=-1)
             # preds = logits
@@ -168,7 +161,6 @@ class LightningRecurrent_NER(pl.LightningModule):
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
-
         if self.num_val_dataloader > 1:
             for i, output in enumerate(outputs):
                 # matched or mismatched
@@ -314,17 +306,6 @@ class LightningRecurrent_NER(pl.LightningModule):
         parser.add_argument("--use_simple_cls", action="store_true")
         return parser
 
-
-# class CustomNonPaddingTokenLoss(nn.CrossEntropyLoss()):
-#     def __init__(self):
-#         super().__init__()
-
-#     def call(self, y_true, y_pred):
-#         loss = self(y_true, y_pred)
-#         mask = tf.cast((y_true > 0), dtype=tf.float32)
-#         loss = loss * mask
-#         return tf.reduce_sum(loss) / tf.reduce_sum(mask)
-
 class ClsHead(nn.Module):
     """Head for sentence-level classification tasks."""
 
@@ -333,19 +314,12 @@ class ClsHead(nn.Module):
         self.dense = nn.Linear(hidden_size * 2, hidden_size)
         self.dropout = nn.Dropout(dropout)
         self.out_proj = nn.Linear(hidden_size, num_labels)
-        self.ff = TimeDistributed(self.dense)
-        self.timeDistributed = TimeDistributed(self.out_proj)
-        self.softmax = TimeDistributed(nn.Softmax(num_labels))
 
     def forward(self, x, **kwargs):
-        x = self.dropout(x)
-        # x = self.ff(x)
         x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
-        # x = self.timeDistributed(x)
         x = self.out_proj(x)
-        # x = self.softmax(x)
         x = nn.functional.softmax(x, dim=-1)
         return x
 

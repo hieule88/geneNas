@@ -85,18 +85,20 @@ class LightningRecurrent_NER(pl.LightningModule):
     def forward(self, hiddens, **inputs):
         labels = None
         if "labels" in inputs:
-            labels = inputs.pop("labels")
+            labels = inputs.pop("labels")[:,:self.max_sequence_length]
         
         x = self.embed(**inputs)
 
-        # if x.isnan().any():
-        #     raise NanException(f"NaN after embeds")
+        if x.isnan().any():
+            raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
+        if x.isnan().any():
+            raise NanException(f"NaN after RNN")
 
         logits = self.cls_head(x)
-        # if logits.isnan().any():
-        #     raise NanException(f"NaN after CLS head")
+        if logits.isnan().any():
+            raise NanException(f"NaN after CLS head")
         loss = None
         if labels is not None:
             # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
@@ -110,8 +112,7 @@ class LightningRecurrent_NER(pl.LightningModule):
                 loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
                 loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
-                                                labels[:,:self.max_sequence_length].reshape\
-                                                ((labels[:,:self.max_sequence_length].shape[0]*labels[:,:self.max_sequence_length].shape[1])))
+                                                labels.reshape((labels.shape[0]*labels.shape[1])))
 
         return loss, logits, hiddens
 
@@ -149,7 +150,6 @@ class LightningRecurrent_NER(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         val_loss, logits, _ = self(None, **batch)
-
         if self.hparams.num_labels >= 1:
             preds = torch.argmax(logits, dim=-1)
             # preds = logits
@@ -161,7 +161,6 @@ class LightningRecurrent_NER(pl.LightningModule):
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
-
         if self.num_val_dataloader > 1:
             for i, output in enumerate(outputs):
                 # matched or mismatched
@@ -315,19 +314,12 @@ class ClsHead(nn.Module):
         self.dense = nn.Linear(hidden_size * 2, hidden_size)
         self.dropout = nn.Dropout(dropout)
         self.out_proj = nn.Linear(hidden_size, num_labels)
-        self.ff = TimeDistributed(self.dense)
-        self.timeDistributed = TimeDistributed(self.out_proj)
-        self.softmax = TimeDistributed(nn.Softmax(num_labels))
 
     def forward(self, x, **kwargs):
-        x = self.dropout(x)
-        # x = self.ff(x)
         x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
-        # x = self.timeDistributed(x)
         x = self.out_proj(x)
-        # x = self.softmax(x)
         x = nn.functional.softmax(x, dim=-1)
         return x
 

@@ -18,11 +18,10 @@ def input_chromosome(args):
             d = pickle.load(f)
             return np.array(d['population'][0])
     except:
-        print('Read from txt fle')
+        print('Read from pickle file')
     try:
         with open(args.file_name, 'rb') as f:
             d = pickle.load(f)
-            print(d)
             return np.array(d['population'][-1])
     except:
         with open(path + args.file_name, 'r') as f:

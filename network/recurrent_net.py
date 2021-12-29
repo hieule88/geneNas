@@ -73,6 +73,9 @@ class RecurrentNet(nn.Module):
             input_dict = {"x1": x_t}
             for i, states in enumerate(hidden_states):
                 input_dict[f"x{i + 2}"] = states
+                # if torch.isnan(states).any():
+                #     print('HUHUHUHUHUHUHUHUHUHUHUHUHUHU')
+                #     quit()
 
             new_hidden_states = []
             for cell in layer:
@@ -80,8 +83,7 @@ class RecurrentNet(nn.Module):
                 new_hidden_states.append(cell_output)
                 # if torch.isnan(cell_output).any():
                 #     print('CELL MAKE NAN: ')
-                #     for weight in cell.parameters():
-                #         print(weight)
+                #     print(cell)
                 #     quit()
             hidden_states = new_hidden_states
             # hidden_states = [cell(input_dict) for cell in layer]

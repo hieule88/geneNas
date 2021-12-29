@@ -60,7 +60,8 @@ class BestNetwork(nn.Module):
         for layer in self.layers:
             std = 1.0 / math.sqrt(self.hidden_size)
             for weight in layer.parameters():
-                weight.data.uniform_(-std, std)
+                # weight.data.uniform_(-std, std)
+                weight.data.normal_(mean=0, std=std)
 
     # this code dumb, need more optimize
     def forward_unidirection(self, layer, x, hidden_states=None):

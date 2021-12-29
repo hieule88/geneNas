@@ -18,7 +18,8 @@ import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 from sklearn.metrics import precision_score, recall_score, f1_score
-
+import warnings
+warnings.filterwarnings("ignore")
 class LightningRecurrent_NERTrain(pl.LightningModule):
     def __init__(
         self,
@@ -54,10 +55,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
 
         self.rnn_dropout = nn.Dropout(p=dropout)
 
-        if not use_simple_cls:
-            self.cls_head = ClsHead(hidden_size, dropout, num_labels)
-        else:
-            self.cls_head = SimpleClsHead(hidden_size, dropout, num_labels)
+        self.cls_head = ClsHead(hidden_size, dropout, num_labels)
 
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None
@@ -83,7 +81,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
     def forward(self, hiddens, **inputs):
         labels = None
         if "labels" in inputs:
-            labels = inputs.pop("labels")
+            labels = inputs.pop("labels")[:,:self.max_sequence_length]
         
         x = self.embed(**inputs)
 
@@ -91,10 +89,15 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         #     raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
+        # if x.isnan().any():
+        #     raise NanException(f"NaN after RNN")
 
         logits = self.cls_head(x)
+        # print('X after CLS: ',logits)
+        
         # if logits.isnan().any():
         #     raise NanException(f"NaN after CLS head")
+
         loss = None
         if labels is not None:
             # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
@@ -108,42 +111,13 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
                 loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
                 loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
-                                                labels[:,:self.max_sequence_length].reshape\
-                                                ((labels[:,:self.max_sequence_length].shape[0]*labels[:,:self.max_sequence_length].shape[1])))
+                                labels.reshape((labels.shape[0]*labels.shape[1])))
 
         return loss, logits, hiddens
 
     def training_step(self, batch, batch_idx, hiddens=None):
         loss, _, hiddens = self(hiddens, **batch)
         return {"loss": loss, "hiddens": hiddens}
-
-    def tbptt_split_batch(self, batch, split_size):
-        num_splits = None
-        split_dict = {}
-        for k, v in batch.items():
-            if k == "labels":
-                split_dict[k] = v
-                continue
-            else:
-                split_dict[k] = torch.split(
-                    v, split_size, int(self.hparams.batch_first)
-                )
-                assert (
-                    num_splits == len(split_dict[k]) or num_splits is None
-                ), "mismatched splits"
-                num_splits = len(split_dict[k])
-
-        new_batch = []
-        for i in range(num_splits):
-            batch_dict = {}
-            for k, v in split_dict.items():
-                if k == "labels":
-                    batch_dict[k] = v
-                else:
-                    batch_dict[k] = v[i]
-            new_batch.append(batch_dict)
-
-        return new_batch
 
     def validation_step(self, batch, batch_idx):
         val_loss, logits, _ = self(None, **batch)
@@ -207,6 +181,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             "epoch": self.current_epoch,
         }
         self.chromosome_logger.log_epoch(log_data)
+        acc = metrics['accuracy']
+        print(f'epoch: {self.current_epoch}, val_loss: {loss}, accuracy: {acc} ')
         return
 
     def test_step(self, batch, batch_idx):
@@ -313,19 +289,12 @@ class ClsHead(nn.Module):
         self.dense = nn.Linear(hidden_size * 2, hidden_size)
         self.dropout = nn.Dropout(dropout)
         self.out_proj = nn.Linear(hidden_size, num_labels)
-        self.ff = TimeDistributed(self.dense)
-        self.timeDistributed = TimeDistributed(self.out_proj)
-        self.softmax = TimeDistributed(nn.Softmax(num_labels))
 
     def forward(self, x, **kwargs):
-        x = self.dropout(x)
-        # x = self.ff(x)
         x = self.dense(x)
         x = torch.tanh(x)
         x = self.dropout(x)
-        # x = self.timeDistributed(x)
         x = self.out_proj(x)
-        # x = self.softmax(x)
         x = nn.functional.softmax(x, dim=-1)
         return x
 
@@ -392,7 +361,7 @@ class GloveEmbedding(nn.Module):
                 # [PAD] = embedding_matrix[0] = [0,0,...0]
                 # <unk> = embedding_matrix[-1] = unk_embed
 
-        token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float())
+        token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float(), freeze=True)
         return token_emb
 
     def forward(self, input_ids):

@@ -10,7 +10,7 @@ import torch.nn as nn
 from .abstract_problem import Problem
 from .function_set import NLPFunctionSet
 from .data_module import DataModule
-from .lit_recurrent_ner import LightningRecurrent_NER
+from .lit_recurrent_ner_train import LightningRecurrent_NERTrain
 
 from network import RecurrentNet
 from util.logger import ChromosomeLogger
@@ -90,7 +90,7 @@ class NERProblemTrain(Problem):
         self.chromsome_logger.log_chromosome(chromosome)
         mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
-        glue_pl = LightningRecurrent_NER(
+        glue_pl = LightningRecurrent_NERTrain(
             max_sequence_length= self.dm.max_seq_length,
             vocab= self.dm.vocabulary,
             num_labels=self.dm.num_labels,
@@ -112,7 +112,6 @@ class NERProblemTrain(Problem):
             train_dataloaders= train_dataloader,
             val_dataloaders= val_dataloader,
         )
-        print(self.chromsome_logger.logs[-1]["data"][-1])
 
     def evaluate(self, chromosome: np.array):
         print(chromosome)

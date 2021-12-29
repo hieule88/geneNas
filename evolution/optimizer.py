@@ -6,7 +6,8 @@ import os
 import time
 
 from .operator import Operator, MultiObjectiveOperator
-
+import warnings
+warnings.filterwarnings("ignore")
 
 class Optimizer:
     def __init__(self, args):

@@ -9,6 +9,8 @@ from sklearn.model_selection import KFold, train_test_split
 import numpy as np
 from collections import Counter
 from numpy import array
+import warnings
+warnings.filterwarnings("ignore")
 
 class DataModule(pl.LightningDataModule):
 

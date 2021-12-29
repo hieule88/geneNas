@@ -6,7 +6,7 @@ import torch.nn as nn
 from .module_tree import ModuleTree
 
 from typing import List, Dict
-
+import math
 
 class RecurrentNet(nn.Module):
     def __init__(
@@ -44,7 +44,7 @@ class RecurrentNet(nn.Module):
                 cell_list.append(new_cell)
             self.layers.append(cell_list)
             # print(self.layers[-1]._modules)
-        # print(self.layers)
+        # print('LAYERS OF CELLS: ',self.layers)
         # self.hidden_size = self
 
         self.init_weights()
@@ -78,6 +78,11 @@ class RecurrentNet(nn.Module):
             for cell in layer:
                 cell_output = cell(input_dict)
                 new_hidden_states.append(cell_output)
+                # if torch.isnan(cell_output).any():
+                #     print('CELL MAKE NAN: ')
+                #     for weight in cell.parameters():
+                #         print(weight)
+                #     quit()
             hidden_states = new_hidden_states
             # hidden_states = [cell(input_dict) for cell in layer]
 
@@ -115,6 +120,13 @@ class RecurrentNet(nn.Module):
             right_to_left_output, dims=[int(self.batch_first)]
         )
         # right_to_left_hidden = torch.flip(right_to_left_hidden, dims=[self.batch_first])
+
+        # print('LEFT to RIGHT RNN: ', left_to_right_output)
+        # print('LEFT to RIGHT RNN: ', left_to_right_output.shape)
+        # print(torch.isnan(left_to_right_output).sum())
+        # print('RIGHT to LEFT RNN: ', right_to_left_output)
+        # print('RIGHT to LEFT RNN: ', right_to_left_output.shape)
+        # print(torch.isnan(right_to_left_output).sum())
 
         output = torch.cat([left_to_right_output, right_to_left_output], dim=2)
         hidden_states = []
@@ -166,7 +178,7 @@ class RecurrentNet(nn.Module):
                 if self.batch_first:
                     x = x.transpose(0, 1).contiguous()  # B x S x H
                 x = torch.cat([x, x], dim=2)
-
+            
             tmp_hidden_states = [states[i, :, :, :] for states in hidden_states]
             if self.bidirection:
                 x, tmp_hidden_states = self.forward_bidirection(
@@ -178,7 +190,9 @@ class RecurrentNet(nn.Module):
                 )  # 1 x B x S
             for main_id in range(self.num_mains):
                 new_hidden_states[main_id].append(tmp_hidden_states[main_id])
-
+        # print('X AFTER ALL LAYERS:',x)
+        # print('X shape AFTER ALL LAYERS:',x.shape)
+            
         hidden_states = [torch.cat(states, dim=0) for states in new_hidden_states]
 
         return x, hidden_states

@@ -22,7 +22,7 @@ def input_chromosome(args):
     try:
         with open(args.file_name, 'rb') as f:
             d = pickle.load(f)
-            return np.array(d['population'][-1])
+            return np.array(d['population'][0])
     except:
         with open(path + args.file_name, 'r') as f:
             chromosome = f.read()

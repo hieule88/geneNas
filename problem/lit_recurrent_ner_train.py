@@ -17,6 +17,7 @@ from collections import Counter
 import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
+from torchcrf import CRF
 from sklearn.metrics import precision_score, recall_score, f1_score
 import warnings
 warnings.filterwarnings("ignore")
@@ -55,7 +56,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
 
         self.rnn_dropout = nn.Dropout(p=dropout)
 
-        self.cls_head = ClsHead(hidden_size, dropout, num_labels)
+        # self.cls_head = ClsHead(hidden_size, dropout, num_labels)
+        self.cls_head = CRF(num_labels)
 
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None
@@ -245,7 +247,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
                 + [
                     p
                     for n, p in embed.named_parameters()
-                    if not any(nd in n for nd in no_decay)
+                    if any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": 0.0,
             },

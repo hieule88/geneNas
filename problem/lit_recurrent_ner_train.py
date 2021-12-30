@@ -37,7 +37,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         eval_batch_size: int = 32,
         eval_splits: Optional[list] = None,
         num_val_dataloader: int = 1,
-        unfreeze_embed: bool = True,
+        freeze_embed: bool = True,
         use_simple_cls: bool = False,
         **kwargs,
     ):
@@ -49,7 +49,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         self.num_val_dataloader = num_val_dataloader
 
         self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = vocab)
-        if unfreeze_embed:
+        if freeze_embed:
             for param in self.embed.parameters():
                 param.requires_grad = False
 
@@ -170,9 +170,9 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
 
             metrics = {}
             metrics['accuracy'] = self.metric.compute(predictions=preds, references=labels)['accuracy']
-            metrics['f1'] = f1_score(labels, preds, average='micro')
-            metrics['recall'] = recall_score(labels, preds, average='micro')
-            metrics['precision'] = precision_score(labels, preds, average='micro')
+            metrics['f1'] = f1_score(labels, preds, average='macro')
+            metrics['recall'] = recall_score(labels, preds, average='macro')
+            metrics['precision'] = precision_score(labels, preds, average='macro')
 
         self.log_dict(metrics, prog_bar=True)
         log_data = {
@@ -208,6 +208,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
 
     def configure_optimizers(self):
         "Prepare optimizer and schedule (linear warmup and decay)"
+        embed = self.embed
         model = self.recurrent_model
         fc = self.cls_head
         no_decay = ["bias", "LayerNorm.weight"]
@@ -222,6 +223,11 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
                     p
                     for n, p in fc.named_parameters()
                     if not any(nd in n for nd in no_decay)
+                ]
+                + [
+                    p
+                    for n, p in embed.named_parameters()
+                    if not any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": self.hparams.weight_decay,
             },
@@ -235,6 +241,11 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
                     p
                     for n, p in fc.named_parameters()
                     if any(nd in n for nd in no_decay)
+                ]
+                + [
+                    p
+                    for n, p in embed.named_parameters()
+                    if not any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": 0.0,
             },
@@ -277,7 +288,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         parser.add_argument("--bidirection", default=True, type=bool)
         parser.add_argument("--hidden_size", default=128, type=int)
         parser.add_argument("--dropout", default=0.1, type=float)
-        parser.add_argument("--unfreeze_embed", action="store_false")
+        parser.add_argument("--freeze_embed", action="store_true")
         parser.add_argument("--use_simple_cls", action="store_true")
         return parser
 
@@ -361,7 +372,7 @@ class GloveEmbedding(nn.Module):
                 # [PAD] = embedding_matrix[0] = [0,0,...0]
                 # <unk> = embedding_matrix[-1] = unk_embed
 
-        token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float(), freeze=True)
+        token_emb = nn.Embedding.from_pretrained(torch.from_numpy(embedding_matrix).float())
         return token_emb
 
     def forward(self, input_ids):

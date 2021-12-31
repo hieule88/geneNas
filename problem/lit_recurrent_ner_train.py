@@ -57,10 +57,11 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         self.rnn_dropout = nn.Dropout(p=dropout)
 
         # self.cls_head = ClsHead(hidden_size, dropout, num_labels)
-        self.cls_head = CRF(num_labels)
+        self.cls_head = SimpleClsHead(hidden_size,num_labels)
 
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None
+        self.crf = CRF(self.num_labels, batch_first=self.hparams.batch_first)
 
     def init_metric(self, metric):
         self.metric = metric
@@ -94,11 +95,13 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         # if x.isnan().any():
         #     raise NanException(f"NaN after RNN")
 
-        logits = self.cls_head(x)
+        after_lstm = self.cls_head(x)
         # print('X after CLS: ',logits)
         
         # if logits.isnan().any():
         #     raise NanException(f"NaN after CLS head")
+
+        logits = self.crf.decode(after_lstm)
 
         loss = None
         if labels is not None:
@@ -112,8 +115,11 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             else:
                 loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
-                loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
+                loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1])),\
                                 labels.reshape((labels.shape[0]*labels.shape[1])))
+                # loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
+                #                 labels.reshape((labels.shape[0]*labels.shape[1])))
+
 
         return loss, logits, hiddens
 
@@ -125,8 +131,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         val_loss, logits, _ = self(None, **batch)
 
         if self.hparams.num_labels >= 1:
-            preds = torch.argmax(logits, dim=-1)
-            # preds = logits
+            # preds = torch.argmax(logits, dim=-1)
+            preds = logits
         elif self.hparams.num_labels == 1:
             preds = logits.squeeze()
 
@@ -317,12 +323,12 @@ class ClsHead(nn.Module):
 
 class SimpleClsHead(nn.Module):
 
-    def __init__(self, hidden_size, dropout, num_labels):
+    def __init__(self, hidden_size, num_labels):
         super().__init__()
         self.dense = nn.Linear(hidden_size * 2, num_labels)
 
     def forward(self, x, **kwargs):
-        x = torch.tanh(x)
+        # x = torch.tanh(x)
         x = self.dense(x)
         return x
 

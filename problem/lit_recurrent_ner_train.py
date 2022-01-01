@@ -101,7 +101,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         # if logits.isnan().any():
         #     raise NanException(f"NaN after CLS head")
 
-        logits = self.crf.decode(after_lstm)
+        logits = torch.FloatTensor(self.crf.decode(after_lstm))
 
         loss = None
         if labels is not None:

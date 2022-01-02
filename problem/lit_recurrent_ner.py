@@ -17,10 +17,10 @@ from collections import Counter
 import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
-from tensorflow.python.keras.utils.np_utils import to_categorical
-from numpy import array 
+from torchcrf import CRF
 from sklearn.metrics import precision_score, recall_score, f1_score
-
+import warnings
+warnings.filterwarnings("ignore")
 class LightningRecurrent_NER(pl.LightningModule):
     def __init__(
         self,
@@ -38,7 +38,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         eval_batch_size: int = 32,
         eval_splits: Optional[list] = None,
         num_val_dataloader: int = 1,
-        unfreeze_embed: bool = True,
+        freeze_embed: bool = True,
         use_simple_cls: bool = False,
         **kwargs,
     ):
@@ -50,19 +50,21 @@ class LightningRecurrent_NER(pl.LightningModule):
         self.num_val_dataloader = num_val_dataloader
 
         self.embed = GloveEmbedding(glove_dir = model_name_or_path, vocab = vocab)
-        if unfreeze_embed:
+        if freeze_embed:
             for param in self.embed.parameters():
                 param.requires_grad = False
 
         self.rnn_dropout = nn.Dropout(p=dropout)
 
-        if not use_simple_cls:
-            self.cls_head = ClsHead(hidden_size, dropout, num_labels)
-        else:
-            self.cls_head = SimpleClsHead(hidden_size, dropout, num_labels)
+        # if not use_simple_cls:
+        #     self.cls_head = ClsHead(hidden_size, dropout, num_labels)
+        # else:
+        #     self.cls_head = SimpleClsHead(hidden_size, dropout, num_labels)
+        self.cls_head = SimpleClsHead(hidden_size, dropout, num_labels)
 
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None
+        self.crf = CRF(self.num_labels, batch_first=self.hparams.batch_first)
 
     def init_metric(self, metric):
         self.metric = metric
@@ -96,23 +98,31 @@ class LightningRecurrent_NER(pl.LightningModule):
         if x.isnan().any():
             raise NanException(f"NaN after RNN")
 
-        logits = self.cls_head(x)
-        if logits.isnan().any():
+        after_lstm = self.cls_head(x)
+        if after_lstm.isnan().any():
             raise NanException(f"NaN after CLS head")
-        loss = None
-        if labels is not None:
-            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
-            # labels = torch.Tensor(labels)
 
-            if self.num_labels == 1:
-                #  We are doing regression
-                loss_fct = nn.MSELoss()
-                loss = loss_fct(logits.view(-1), labels.view(-1))
-            else:
-                loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
+        logits = torch.tensor(self.crf.decode(after_lstm))
+    
+        mask = torch.tensor([[1 if labels[j][i] != -2 else 0 \
+                                for i in range(len(labels[j]))] \
+                                for j in range(len(labels))], dtype=torch.uint8).cuda()
 
-                loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
-                                                labels.reshape((labels.shape[0]*labels.shape[1])))
+        loss = self.crf(after_lstm, labels, mask=mask)
+
+        # if labels is not None:
+        #     # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
+        #     # labels = torch.Tensor(labels)
+
+        #     if self.num_labels == 1:
+        #         #  We are doing regression
+        #         loss_fct = nn.MSELoss()
+        #         loss = loss_fct(logits.view(-1), labels.view(-1))
+        #     else:
+        #         loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
+
+        #         loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
+        #                                         labels.reshape((labels.shape[0]*labels.shape[1])))
 
         return loss, logits, hiddens
 
@@ -151,8 +161,8 @@ class LightningRecurrent_NER(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         val_loss, logits, _ = self(None, **batch)
         if self.hparams.num_labels >= 1:
-            preds = torch.argmax(logits, dim=-1)
-            # preds = logits
+            # preds = torch.argmax(logits, dim=-1)
+            preds = logits
         elif self.hparams.num_labels == 1:
             preds = logits.squeeze()
 
@@ -204,7 +214,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         self.log_dict(metrics, prog_bar=True)
         log_data = {
             f"val_loss": loss.item(),
-            "metrics": metrics,
+            "metrics": metrics["accuracy"],
             "epoch": self.current_epoch,
         }
         self.chromosome_logger.log_epoch(log_data)
@@ -302,7 +312,7 @@ class LightningRecurrent_NER(pl.LightningModule):
         parser.add_argument("--bidirection", default=True, type=bool)
         parser.add_argument("--hidden_size", default=128, type=int)
         parser.add_argument("--dropout", default=0.1, type=float)
-        parser.add_argument("--unfreeze_embed", action="store_false")
+        parser.add_argument("--freeze_embed", action="store_true")
         parser.add_argument("--use_simple_cls", action="store_true")
         return parser
 
@@ -334,7 +344,7 @@ class SimpleClsHead(nn.Module):
         self.dense = nn.Linear(hidden_size * 2, num_labels)
 
     def forward(self, x, **kwargs):
-        x = torch.tanh(x)
+        # x = torch.tanh(x)
         x = self.dense(x)
         return x
 

@@ -107,7 +107,7 @@ class DataModule(pl.LightningDataModule):
 
         self.text_fields = self.task_text_field_map[task_name]
         self.num_labels = self.glue_task_num_labels[task_name]
-        if self.task_name != 'ner':
+        if self.task_name not in ['ner', 'trec']:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name_or_path, use_fast=True
             )
@@ -195,6 +195,8 @@ class DataModule(pl.LightningDataModule):
 
     def vocab_to_ids(self):
         all_tokens = sum(self.dataset["train"]["tokens"], [])
+        # print(all_tokens)
+        # quit()
         all_tokens_array = np.array(list(map(str.lower, all_tokens)))
 
         counter = Counter(all_tokens_array)
@@ -224,7 +226,7 @@ class DataModule(pl.LightningDataModule):
             texts_or_text_pairs = example_batch[self.text_fields[0]]
 
         # Tokenize the text/text pairs
-        if self.task_name != 'ner':
+        if self.task_name not in ['ner','trec']:
             features = self.tokenizer.batch_encode_plus(
                 texts_or_text_pairs,
                 max_length=self.max_seq_length,
@@ -254,15 +256,15 @@ class DataModule(pl.LightningDataModule):
             features = {}
             features['input_ids'] = input_ids
  
-
-        # Rename label to labels to make it easier to pass to model forward
         features["labels"] = example_batch[self.task_label_field_map[self.task_name][0]]
-        for label_index in range(len(features["labels"])):
-            tmp_label = [-2 for i in range(self.max_seq_length + 1)]
-            tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
-            tmp_label[self.max_seq_length] = len(features["labels"][label_index])
-            features["labels"][label_index] = tmp_label
-        # features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)
+        if self.task_name in ['ner']:
+            # Rename label to labels to make it easier to pass to model forward
+            for label_index in range(len(features["labels"])):
+                tmp_label = [-2 for i in range(self.max_seq_length + 1)]
+                tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
+                tmp_label[self.max_seq_length] = len(features["labels"][label_index])
+                features["labels"][label_index] = tmp_label
+            # features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)
 
         return features
 

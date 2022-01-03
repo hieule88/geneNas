@@ -31,7 +31,7 @@ class NERProblemTrain(Problem):
         self.dm.setup("fit")
 
         self.chromsome_logger = ChromosomeLogger()
-        self.metric_name = self.dm.metrics_names[self.hparams.task_name]
+        self.metric_name = self.dm.q[self.hparams.task_name]
 
         self.progress_bar = 0
         self.weights_summary = None

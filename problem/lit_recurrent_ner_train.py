@@ -18,7 +18,7 @@ import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 from torchcrf import CRF
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import warnings
 warnings.filterwarnings("ignore")
 class LightningRecurrent_NERTrain(pl.LightningModule):
@@ -54,6 +54,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             for param in self.embed.parameters():
                 param.requires_grad = False
 
+        self.recurrent_model = None
         self.rnn_dropout = nn.Dropout(p=dropout)
 
         # self.cls_head = ClsHead(hidden_size, dropout, num_labels)
@@ -62,7 +63,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None
         self.crf = CRF(self.num_labels, batch_first=self.hparams.batch_first)
-
+        self.callbacks = []
+        
     def init_metric(self, metric):
         self.metric = metric
 
@@ -181,7 +183,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
             metrics = {}
-            metrics['accuracy'] = self.metric.compute(predictions=preds, references=labels)['accuracy']
+            metrics['accuracy'] = accuracy_score(predictions=preds, references=labels)
             metrics['f1'] = f1_score(labels, preds, average='macro')
             metrics['recall'] = recall_score(labels, preds, average='macro')
             metrics['precision'] = precision_score(labels, preds, average='macro')
@@ -193,7 +195,9 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             "epoch": self.current_epoch,
         }
         self.chromosome_logger.log_epoch(log_data)
-        # acc = metrics['accuracy']
+        callbacks = metrics
+        callbacks['val_loss'] = loss
+        self.callbacks.append(callbacks)
         print(f'epoch: {self.current_epoch}, val_loss: {loss}, accuracy: {metrics} ')
         return
 

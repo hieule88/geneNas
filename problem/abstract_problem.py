@@ -130,6 +130,8 @@ class Problem(ABC):
         parser.add_argument("--max_arity", default=3, type=int)
 
         parser.add_argument("--pop_size", default=10, type=int)
+        
+        parser.add_argument("--baseline", action="store_true")
 
         return parser
 

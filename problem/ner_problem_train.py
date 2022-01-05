@@ -23,6 +23,7 @@ from evolution import GeneType
 from torch.utils.data import DataLoader
 import warnings
 warnings.filterwarnings("ignore")
+import matplotlib.pyplot as plt
 
 class NERProblemTrain(Problem):
     def __init__(self, args):
@@ -38,7 +39,8 @@ class NERProblemTrain(Problem):
         self.weights_summary = None
         self.early_stop = None
         self.save_path = args.save_path
-        
+        self.baseline = False
+
     def parse_chromosome(
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False
     ):
@@ -86,11 +88,12 @@ class NERProblemTrain(Problem):
             callbacks= early_stop.append(cb),
             max_epochs = self.hparams.max_epochs,
         )
-        return trainer, cb
+        return trainer
 
     def setup_model(self, chromosome):
-        self.chromsome_logger.log_chromosome(chromosome)
-        mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
+        if not self.baseline:
+            self.chromsome_logger.log_chromosome(chromosome)
+            mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
         glue_pl = LightningRecurrent_NERTrain(
             max_sequence_length= self.dm.max_seq_length,
@@ -100,8 +103,11 @@ class NERProblemTrain(Problem):
             **vars(self.hparams),
         )
         glue_pl.init_metric(self.dm.metric)
-        glue_pl.init_model(mains, adfs)
-        glue_pl.init_chromosome_logger(self.chromsome_logger)
+        if not self.baseline:
+            glue_pl.init_model(mains, adfs)
+            glue_pl.init_chromosome_logger(self.chromsome_logger)
+        else: 
+            glue_pl.recurrent_model = torch.nn.LSTM(bidirectional=glue_pl.hparams.bidirection)
         return glue_pl
 
     def train(self, model):
@@ -116,13 +122,29 @@ class NERProblemTrain(Problem):
             val_dataloaders= val_dataloader,
         )
         print(callbacks.collection)
+        num_epoch = len(callbacks.collection)
+        fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize= (10, 12), dpi=120)
+        ax1.plot([i for i in range(1, num_epoch+1)], [i['accuracy'] for i in callbacks.collection], color= 'g')
+        ax2.plot([i for i in range(1, num_epoch+1)], [i['f1'] for i in callbacks.collection], color= 'b')
+        ax3.plot([i for i in range(1, num_epoch+1)], [i['val_loss'] for i in callbacks.collection], color= 'r')
+
+        ax1.set(title='Accuracy', xlabel='Epochs', ylabel='Accuracy')
+        ax1.set(title='F1', xlabel='Epochs', ylabel='F1')
+        ax1.set(title='Val Loss', xlabel='Epochs', ylabel='Loss')
+
+        plt.show()
+        # print(model.callbacks)
 
     def evaluate(self, chromosome: np.array):
-        print(chromosome)
-        symbols, _, _ = self.replace_value_with_symbol(chromosome)
-        print(f"CHROMOSOME: {symbols}")
-        print('Set up model')
-        glue_pl = self.setup_model(chromosome)
+        if not self.baseline:
+            print(chromosome)
+            symbols, _, _ = self.replace_value_with_symbol(chromosome)
+            print(f"CHROMOSOME: {symbols}")
+            print('Set up model')
+            glue_pl = self.setup_model(chromosome)
+        else:  
+            glue_pl = self.setup_model()
+
         self.train(glue_pl)
         
         glue_pl.trainer.save_checkpoint(self.save_path)

@@ -106,7 +106,8 @@ class NERProblemTrain(Problem):
             glue_pl.init_model(mains, adfs)
             glue_pl.init_chromosome_logger(self.chromsome_logger)
         else: 
-            glue_pl.recurrent_model = torch.nn.LSTM(bidirectional=glue_pl.hparams.bidirection)
+            recurrent_model = torch.nn.LSTM(input_size = glue_pl.embed.embed_dim,hidden_size= glue_pl.hidden_size, bidirectional=glue_pl.hparams.bidirection)
+            glue_pl.add_module("recurrent_model", recurrent_model) 
         return glue_pl
 
     def train(self, model):

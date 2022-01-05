@@ -54,7 +54,6 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             for param in self.embed.parameters():
                 param.requires_grad = False
 
-        self.recurrent_model = None
         self.rnn_dropout = nn.Dropout(p=dropout)
 
         # self.cls_head = ClsHead(hidden_size, dropout, num_labels)
@@ -64,7 +63,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         self.metric = None
         self.crf = CRF(self.num_labels, batch_first=self.hparams.batch_first)
         self.callbacks = []
-        
+        self.hidden_size = hidden_size
     def init_metric(self, metric):
         self.metric = metric
 

@@ -18,7 +18,7 @@ import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 from torchcrf import CRF
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import warnings
 warnings.filterwarnings("ignore")
 class LightningRecurrent_CLS(pl.LightningModule):
@@ -85,7 +85,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
     def forward(self, hiddens, **inputs):
         labels = None
         if "labels" in inputs:
-            labels = inputs.pop("labels")[:,:self.max_sequence_length]
+            labels = inputs.pop("labels")
         
         x = self.embed(**inputs)
 
@@ -96,19 +96,30 @@ class LightningRecurrent_CLS(pl.LightningModule):
         if x.isnan().any():
             raise NanException(f"NaN after RNN")
 
+        if self.hparams.batch_first:
+            x = x[:, 0, :]  # CLS token
+        else:
+            x = x[0, :, :]
+            
         logits = self.cls_head(x)
+
         if logits.isnan().any():
             raise NanException(f"NaN after CLS head")
 
         loss = None
-
+        print('LOGITS: ',logits)
+        print('LABELS: ',labels)
         if labels is not None:
+            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
+            # labels = torch.Tensor(labels)
+
             if self.num_labels == 1:
                 #  We are doing regression
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
+
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         return loss, logits, hiddens
@@ -189,9 +200,8 @@ class LightningRecurrent_CLS(pl.LightningModule):
         if np.all(preds == preds[0]):
             metrics = {self.metric.name: 0}
         else:
-
             metrics = {}
-            metrics['accuracy'] = self.metric.compute(predictions=preds, references=labels)['accuracy']
+            metrics['accuracy'] = accuracy_score(labels, preds)
             metrics['f1'] = f1_score(labels, preds, average='macro')
             metrics['recall'] = recall_score(labels, preds, average='macro')
             metrics['precision'] = precision_score(labels, preds, average='macro')
@@ -199,7 +209,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
         self.log_dict(metrics, prog_bar=True)
         log_data = {
             f"val_loss": loss.item(),
-            "metrics": metrics["accuracy"],
+            "metrics": metrics,
             "epoch": self.current_epoch,
         }
         self.chromosome_logger.log_epoch(log_data)
@@ -228,6 +238,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
 
     def configure_optimizers(self):
         "Prepare optimizer and schedule (linear warmup and decay)"
+        emb = self.embed
         model = self.recurrent_model
         fc = self.cls_head
         no_decay = ["bias", "LayerNorm.weight"]
@@ -242,6 +253,11 @@ class LightningRecurrent_CLS(pl.LightningModule):
                     p
                     for n, p in fc.named_parameters()
                     if not any(nd in n for nd in no_decay)
+                ]
+                + [
+                    p
+                    for n, p in emb.named_parameters()
+                    if not any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": self.hparams.weight_decay,
             },
@@ -254,6 +270,11 @@ class LightningRecurrent_CLS(pl.LightningModule):
                 + [
                     p
                     for n, p in fc.named_parameters()
+                    if any(nd in n for nd in no_decay)
+                ]
+                + [
+                    p
+                    for n, p in emb.named_parameters()
                     if any(nd in n for nd in no_decay)
                 ],
                 "weight_decay": 0.0,

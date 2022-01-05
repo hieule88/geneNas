@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
+from hashlib import new
 import datasets
+from fsspec.utils import tokenize
 from tensorflow.python.keras.utils.np_utils import to_categorical
 import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
@@ -50,7 +52,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": "f1",
         "trec": "accuracy",
         "twitter": "accuracy",
-        "ner": "accuracy",
+        "ner": "f1",
         # "health_fact": "accuracy",
     }
 
@@ -119,6 +121,9 @@ class DataModule(pl.LightningDataModule):
     def setup(self, stage):
         if not self.cache_dataset:
             self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
+            if self.task_name in ['trec']:
+                self.dataset = self.tokenize_glove(self.dataset)   
+
             self.vocab_to_ids()
             for split in self.dataset.keys():
 
@@ -192,9 +197,42 @@ class DataModule(pl.LightningDataModule):
     @property
     def metric(self):
         return datasets.load_metric(self.metrics_names[self.task_name])
+    
+    def tokenize_glove(self, dataset):
+        import nltk
+        from nltk.tokenize import word_tokenize
+        nltk.download('stopwords')
+        nltk.download('punkt')
+        from nltk.corpus import stopwords 
+        import string
+
+        stopwords_english = stopwords.words('english') 
+
+        new_dataset = {
+            split: {
+                self.task_label_field_map[self.task_name][0] :dataset[split][self.task_label_field_map[self.task_name][0]],
+                } for split in dataset.keys()
+        }
+        for split in new_dataset.keys():
+            dataset_clean = []
+            for i in range(len(dataset[split][self.text_fields[0]])):
+                tokens = word_tokenize(dataset[split][self.text_fields[0]][i])
+                tokens_clean = []
+
+                for word in tokens: # Go through every word in your tokens list
+                    if (word not in string.punctuation):  # remove punctuation
+                        tokens_clean.append(word)
+
+                dataset_clean.append(tokens_clean)
+
+            new_dataset[split][self.text_fields[0]] = dataset_clean
+            new_dataset[split] = datasets.Dataset.from_dict(new_dataset[split])
+
+        new_dataset = datasets.DatasetDict(new_dataset)
+        return new_dataset
 
     def vocab_to_ids(self):
-        all_tokens = sum(self.dataset["train"]["tokens"], [])
+        all_tokens = sum(self.dataset["train"][self.text_fields[0]], [])
         # print(all_tokens)
         # quit()
         all_tokens_array = np.array(list(map(str.lower, all_tokens)))
@@ -255,7 +293,7 @@ class DataModule(pl.LightningDataModule):
 
             features = {}
             features['input_ids'] = input_ids
- 
+
         features["labels"] = example_batch[self.task_label_field_map[self.task_name][0]]
         if self.task_name in ['ner']:
             # Rename label to labels to make it easier to pass to model forward

@@ -18,7 +18,7 @@ import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 from torchcrf import CRF
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 import warnings
 warnings.filterwarnings("ignore")
 class LightningRecurrent_NER(pl.LightningModule):
@@ -206,15 +206,15 @@ class LightningRecurrent_NER(pl.LightningModule):
             labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
             metrics = {}
-            metrics['accuracy'] = self.metric.compute(predictions=preds, references=labels)['accuracy']
-            metrics['f1'] = f1_score(labels, preds, average='micro')
-            metrics['recall'] = recall_score(labels, preds, average='micro')
-            metrics['precision'] = precision_score(labels, preds, average='micro')
+            metrics['accuracy'] = accuracy_score(labels, preds)
+            metrics['f1'] = f1_score(labels, preds, average='macro')
+            metrics['recall'] = recall_score(labels, preds, average='macro')
+            metrics['precision'] = precision_score(labels, preds, average='macro')
 
         self.log_dict(metrics, prog_bar=True)
         log_data = {
             f"val_loss": loss.item(),
-            "metrics": metrics["accuracy"],
+            "metrics": metrics,
             "epoch": self.current_epoch,
         }
         self.chromosome_logger.log_epoch(log_data)

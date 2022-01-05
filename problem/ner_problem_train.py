@@ -133,15 +133,13 @@ class NERProblemTrain(Problem):
         plt.show()
         # print(model.callbacks)
 
-    def evaluate(self, chromosome: np.array):
+    def evaluate(self, chromosome=False):
         if not self.baseline:
             print(chromosome)
             symbols, _, _ = self.replace_value_with_symbol(chromosome)
             print(f"CHROMOSOME: {symbols}")
             print('Set up model')
-            glue_pl = self.setup_model(chromosome)
-        else:  
-            glue_pl = self.setup_model()
+        glue_pl = self.setup_model(chromosome)
 
         self.train(glue_pl)
         

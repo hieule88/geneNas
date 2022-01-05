@@ -43,8 +43,9 @@ def parse_args():
 def main():
     args = parse_args()
     problem = NERProblemTrain(args= args)
+    problem.baseline = True
     problem.early_stop = 10
-    problem.evaluate()    
+    problem.evaluate(False)    
 
 if __name__ == "__main__":
     main()

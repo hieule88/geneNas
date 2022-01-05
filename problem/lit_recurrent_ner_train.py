@@ -64,6 +64,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         self.crf = CRF(self.num_labels, batch_first=self.hparams.batch_first)
         self.callbacks = []
         self.hidden_size = hidden_size
+
     def init_metric(self, metric):
         self.metric = metric
 
@@ -193,7 +194,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             "metrics": metrics,
             "epoch": self.current_epoch,
         }
-        self.chromosome_logger.log_epoch(log_data)
+        
+        # self.chromosome_logger.log_epoch(log_data)
         callbacks = metrics
         callbacks['val_loss'] = loss.item()
         self.callbacks.append(callbacks)

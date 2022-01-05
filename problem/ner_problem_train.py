@@ -39,7 +39,7 @@ class NERProblemTrain(Problem):
         self.weights_summary = None
         self.early_stop = None
         self.save_path = args.save_path
-        self.baseline = False
+        self.baseline = True
 
     def parse_chromosome(
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False

@@ -183,7 +183,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
             metrics = {}
-            metrics['accuracy'] = accuracy_score(predictions=preds, references=labels)
+            metrics['accuracy'] = accuracy_score(labels, preds)
             metrics['f1'] = f1_score(labels, preds, average='macro')
             metrics['recall'] = recall_score(labels, preds, average='macro')
             metrics['precision'] = precision_score(labels, preds, average='macro')
@@ -196,7 +196,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         }
         self.chromosome_logger.log_epoch(log_data)
         callbacks = metrics
-        callbacks['val_loss'] = loss
+        callbacks['val_loss'] = loss.item()
         self.callbacks.append(callbacks)
         print(f'epoch: {self.current_epoch}, val_loss: {loss}, accuracy: {metrics} ')
         return

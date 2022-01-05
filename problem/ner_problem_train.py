@@ -66,7 +66,6 @@ class NERProblemTrain(Problem):
         return glue_pl, trainer
 
     def setup_trainer(self):
-        cb = MetricTracker()
         if type(self.early_stop) == int:
             early_stop = EarlyStopping(
                 monitor=self.metric_name,
@@ -77,7 +76,7 @@ class NERProblemTrain(Problem):
             )
             early_stop = [early_stop]
         else:
-            early_stop = []
+            early_stop = None
 
         trainer = pl.Trainer.from_argparse_args(
             self.hparams,
@@ -85,7 +84,7 @@ class NERProblemTrain(Problem):
             # automatic_optimization=False,
             weights_summary=self.weights_summary,
             checkpoint_callback=False,
-            callbacks= early_stop.append(cb),
+            callbacks= early_stop,
             max_epochs = self.hparams.max_epochs,
         )
         return trainer
@@ -112,7 +111,7 @@ class NERProblemTrain(Problem):
 
     def train(self, model):
         
-        trainer, callbacks = self.setup_trainer()
+        trainer = self.setup_trainer()
         train_dataloader = DataLoader(self.dm.dataset['train'], batch_size= self.hparams.train_batch_size, shuffle= True, num_workers= self.hparams.num_workers)
         val_dataloader = DataLoader(self.dm.dataset['validation'], batch_size= self.hparams.eval_batch_size, num_workers= self.hparams.num_workers)
         # self.lr_finder(model, trainer, train_dataloader, val_dataloader)
@@ -121,12 +120,11 @@ class NERProblemTrain(Problem):
             train_dataloaders= train_dataloader,
             val_dataloaders= val_dataloader,
         )
-        print(callbacks.collection)
-        num_epoch = len(callbacks.collection)
+        num_epoch = len(model.callbacks)
         fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize= (10, 12), dpi=120)
-        ax1.plot([i for i in range(1, num_epoch+1)], [i['accuracy'] for i in callbacks.collection], color= 'g')
-        ax2.plot([i for i in range(1, num_epoch+1)], [i['f1'] for i in callbacks.collection], color= 'b')
-        ax3.plot([i for i in range(1, num_epoch+1)], [i['val_loss'] for i in callbacks.collection], color= 'r')
+        ax1.plot([i for i in range(1, num_epoch+1)], [i['accuracy'] for i in model.callbacks], color= 'g')
+        ax2.plot([i for i in range(1, num_epoch+1)], [i['f1'] for i in model.callbacks], color= 'b')
+        ax3.plot([i for i in range(1, num_epoch+1)], [i['val_loss'] for i in model.callbacks], color= 'r')
 
         ax1.set(title='Accuracy', xlabel='Epochs', ylabel='Accuracy')
         ax1.set(title='F1', xlabel='Epochs', ylabel='F1')
@@ -148,12 +146,3 @@ class NERProblemTrain(Problem):
         self.train(glue_pl)
         
         glue_pl.trainer.save_checkpoint(self.save_path)
-
-class MetricTracker(Callback):
-    def __init__(self):
-        self.collection = []
-
-    def on_validation_epoch_end(self, trainer, module):
-        elogs = trainer.logged_metrics # access it here
-        self.collection.append(elogs)
-        # do whatever is needed

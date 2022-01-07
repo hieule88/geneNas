@@ -124,7 +124,7 @@ class NERProblemTrain(Problem):
             val_dataloaders= val_dataloader,
         )
         num_epoch = len(model.callbacks)
-        fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize= (10, 12), dpi=120)
+        fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize= (21, 7), dpi=120)
         ax1.plot([i for i in range(1, num_epoch+1)], [i['accuracy'] for i in model.callbacks], color= 'g')
         ax2.plot([i for i in range(1, num_epoch+1)], [i['f1'] for i in model.callbacks], color= 'b')
         ax3.plot([i for i in range(1, num_epoch+1)], [i['val_loss'] for i in model.callbacks], color= 'r')

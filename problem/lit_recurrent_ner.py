@@ -106,7 +106,7 @@ class LightningRecurrent_NER(pl.LightningModule):
     
         mask = torch.tensor([[1 if labels[j][i] != -2 else 0 \
                                 for i in range(len(labels[j]))] \
-                                for j in range(len(labels))], dtype=torch.uint8).cuda()
+                                for j in range(len(labels))], dtype=torch.uint8)
 
         loss = self.crf(after_lstm, labels, mask=mask)
 

@@ -8,6 +8,9 @@ from problem.ner_problem import NERProblemMultiObj
 from evolution import MultiObjectiveOptimizer
 import warnings
 warnings.filterwarnings("ignore")
+import logging
+
+logging.disable(logging.CRITICAL)
 
 def parse_args():
     parser = argparse.ArgumentParser()

@@ -136,14 +136,11 @@ class NERProblemMultiObj(NERProblem):
         outputs = []
         encounter_nan = False
         for batch in val_dataloader:
-            labels = batch[1]
-            
-            
-            # batch = {k: v.cuda() for k, v in batch.items()}
-            # batch =  batch[0].cuda()
-            batch =  batch[0]['feature_map']#note
+            print(batch)
+            labels = batch["labels"]
+
             with torch.cuda.amp.autocast():
-                logits = model(batch)[1]
+                logits = model(None, **batch)[1]
                 if logits.isnan().any():
                     print(f"NaN after NasgepNet")
                     encounter_nan = True
@@ -169,6 +166,8 @@ class NERProblemMultiObj(NERProblem):
             if np.all(preds == preds[0]):
                 metrics = 0
             else:
+                preds = [i for j in range(len(preds)) for i in preds[j][:labels[j][-1]] ]
+                labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
                 metrics = {}
                 metrics['accuracy'] = accuracy_score(labels, preds)
                 metrics['f1'] = f1_score(labels, preds, average='macro')

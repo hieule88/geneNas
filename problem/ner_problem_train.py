@@ -130,8 +130,8 @@ class NERProblemTrain(Problem):
         ax3.plot([i for i in range(1, num_epoch+1)], [i['val_loss'] for i in model.callbacks], color= 'r')
 
         ax1.set(title='Accuracy', xlabel='Epochs', ylabel='Accuracy')
-        ax1.set(title='F1', xlabel='Epochs', ylabel='F1')
-        ax1.set(title='Val Loss', xlabel='Epochs', ylabel='Loss')
+        ax2.set(title='F1', xlabel='Epochs', ylabel='F1')
+        ax3.set(title='Val Loss', xlabel='Epochs', ylabel='Loss')
 
         plt.show()
         # print(model.callbacks)

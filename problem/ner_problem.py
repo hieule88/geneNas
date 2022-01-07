@@ -18,6 +18,8 @@ from util.exception import NanException
 
 from typing import List, Tuple
 from evolution import GeneType
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 class NERProblem(Problem):
     def __init__(self, args):

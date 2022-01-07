@@ -9,8 +9,9 @@ from evolution import MultiObjectiveOptimizer
 import warnings
 warnings.filterwarnings("ignore")
 import logging
-
 logging.disable(logging.CRITICAL)
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 def parse_args():
     parser = argparse.ArgumentParser()

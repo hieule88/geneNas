@@ -39,7 +39,7 @@ class NERProblemTrain(Problem):
         self.weights_summary = None
         self.early_stop = None
         self.save_path = args.save_path
-        self.baseline = True
+        self.baseline = False
 
     def parse_chromosome(
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False
@@ -103,11 +103,13 @@ class NERProblemTrain(Problem):
         )
         glue_pl.init_metric(self.dm.metric)
         if not self.baseline:
+            print('RNN searched Training:')
             glue_pl.init_model(mains, adfs)
             glue_pl.init_chromosome_logger(self.chromsome_logger)
         else: 
+            print('Baseline Trainning:')
             recurrent_model = torch.nn.LSTM(input_size = glue_pl.embed.embed_dim,hidden_size= glue_pl.hidden_size, bidirectional=glue_pl.hparams.bidirection)
-            glue_pl.add_module("recurrent_model", recurrent_model) 
+            glue_pl.add_module("recurrent_model", recurrent_model)
         return glue_pl
 
     def train(self, model):

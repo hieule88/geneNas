@@ -176,17 +176,17 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
 
-        if np.all(preds == preds[0]):
-            metrics = {self.metric.name: 0}
-        else:
-            preds = [i for j in range(len(preds)) for i in preds[j][:labels[j][-1]] ]
-            labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
+        # if np.all(preds == preds[0]):
+        #     metrics = {self.metric.name: 0}
+        # else:
+        preds = [i for j in range(len(preds)) for i in preds[j][:labels[j][-1]] ]
+        labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
-            metrics = {}
-            metrics['accuracy'] = accuracy_score(labels, preds)
-            metrics['f1'] = f1_score(labels, preds, average='macro')
-            metrics['recall'] = recall_score(labels, preds, average='macro')
-            metrics['precision'] = precision_score(labels, preds, average='macro')
+        metrics = {}
+        metrics['accuracy'] = accuracy_score(labels, preds)
+        metrics['f1'] = f1_score(labels, preds, average='macro')
+        metrics['recall'] = recall_score(labels, preds, average='macro')
+        metrics['precision'] = precision_score(labels, preds, average='macro')
 
         self.log_dict(metrics, prog_bar=True)
         log_data = {

@@ -136,7 +136,6 @@ class NERProblemMultiObj(NERProblem):
         outputs = []
         encounter_nan = False
         for batch in val_dataloader:
-            print(batch)
             labels = batch["labels"]
 
             with torch.cuda.amp.autocast():

@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from transformers import AutoModel, AutoConfig
 import torch
 import torch.nn as nn
-
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 from .abstract_problem import Problem
 from .function_set import NLPFunctionSet
 from .data_module import DataModule
@@ -118,26 +118,97 @@ class NERProblem(Problem):
         return self.chromsome_logger.logs[-1]["data"][-1]["metrics"][self.metric_name]
 
 class NERProblemMultiObj(NERProblem):
-    def evaluate(self, chromosome: np.array):
-        glue_pl, trainer = self.setup_model_trainer(chromosome)
-        # self.lr_finder(
-        #     glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
-        # )
-        try:
-            trainer.fit(glue_pl, self.dm)
-            trainer.test(glue_pl, test_dataloaders=self.dm.test_dataloader())
-        except NanException as e:
-            print(e)
-            log_data = {
-                f"val_loss": 0.0,
-                "metrics": {"accuracy": 0.0, "f1": 0.0},
-                "epoch": -1,
-            }
-            self.chromsome_logger.log_epoch(log_data)
+    def __init__(self, args):
+        super().__init__(args)
+        self.k_folds = self.hparams.k_folds
+        self.weight_values = [0.5, 1, 2, 3]
+
+    def apply_weight(self, model, value):
+        sampler = torch.distributions.uniform.Uniform(low=-value, high=value)
+        with torch.no_grad():
+            for name, param in model.named_parameters():
+                new_param = sampler.sample(param.shape)
+                param.copy_(new_param)
+
+    def run_inference(self, model, weight_value, val_dataloader):
+        self.apply_weight(model, weight_value)
+        
+        outputs = []
+        encounter_nan = False
+        for batch in val_dataloader:
+            labels = batch[1]
+            
+            
+            # batch = {k: v.cuda() for k, v in batch.items()}
+            # batch =  batch[0].cuda()
+            batch =  batch[0]['feature_map']#note
+            with torch.cuda.amp.autocast():
+                logits = model(batch)[1]
+                if logits.isnan().any():
+                    print(f"NaN after NasgepNet")
+                    encounter_nan = True
+                    break
+
+                if logits.isnan().any():
+                    print(f"NaN after CLS head")
+                    encounter_nan = True
+                    break
+
+            if self.dm.num_labels > 1:
+                preds = logits
+            else:
+                preds = logits.squeeze()
+            preds = preds.detach().cpu()
+            # batch = {k: v.detach().cpu() for k, v in batch.items()}
+
+            outputs.append({"preds": preds, "labels": labels})
+
+        if not encounter_nan:
+            preds = torch.cat([x["preds"] for x in outputs]).detach().cpu().numpy()
+            labels = torch.cat([x["labels"] for x in outputs]).detach().cpu().numpy()
+            if np.all(preds == preds[0]):
+                metrics = 0
+            else:
+                metrics = {}
+                metrics['accuracy'] = accuracy_score(labels, preds)
+                metrics['f1'] = f1_score(labels, preds, average='macro')
+                metrics['recall'] = recall_score(labels, preds, average='macro')
+                metrics['precision'] = precision_score(labels, preds, average='macro')
+                metrics = metrics[self.metric_name]
+        else:
+            metrics = 0
+        return metrics
+
+    def perform_kfold(self, model):
+        avg_metrics = 0
+        avg_max_metrics = 0
+        total_time = 0
+
+        for fold, _, val_dataloader in self.dm.kfold(self.k_folds, None):
+            start = time.time()
+            metrics = [
+                self.run_inference(model, wval, val_dataloader)
+                for wval in self.weight_values
+            ]
+            end = time.time()
+            avg_metrics += np.mean(metrics)
+            avg_max_metrics += np.max(metrics)
+            total_time += end - start
+            print(
+                f"FOLD {fold}: {self.metric_name} {np.mean(metrics)} {np.max(metrics)} ; Time {end - start}"
+            )
 
         # result = trainer.test()
-        print(self.chromsome_logger.logs[-1]["data"][-1])
-        return (
-            self.chromsome_logger.logs[-1]["data"][-1]["metrics"][self.metric_name],
-            NERProblem.total_params(glue_pl),
+        avg_metrics = avg_metrics / self.k_folds
+        avg_max_metrics = avg_max_metrics / self.k_folds
+        print(
+            f"FOLD AVG: {self.metric_name} {avg_metrics} {avg_max_metrics} ; Time {total_time}"
         )
+        return avg_metrics, avg_max_metrics
+
+    def evaluate(self, chromosome: np.array):
+        symbols, _, _ = self.replace_value_with_symbol(chromosome)
+        print(f"CHROMOSOME: {symbols}")
+        RNN_model = self.setup_model(chromosome)
+        avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
+        return avg_metrics, avg_max_metrics, NERProblemMultiObj.total_params(RNN_model)

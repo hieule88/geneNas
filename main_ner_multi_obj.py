@@ -57,8 +57,6 @@ def main():
         print(f"Individual {i + 1}: {objs[i]}, chromosome: {symbols}")
         problem.make_graph(idv, prefix=f"{args.task_name}.idv_{i+1}")
     
-    # chromosome = [int(x) for x in chromosome]
-    problem.evaluate(population)
 
 if __name__ == "__main__":
     main()

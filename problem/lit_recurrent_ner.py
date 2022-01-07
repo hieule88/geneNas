@@ -91,16 +91,16 @@ class LightningRecurrent_NER(pl.LightningModule):
         
         x = self.embed(**inputs)
 
-        if x.isnan().any():
-            raise NanException(f"NaN after embeds")
+        # if x.isnan().any():
+        #     raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
-        if x.isnan().any():
-            raise NanException(f"NaN after RNN")
+        # if x.isnan().any():
+        #     raise NanException(f"NaN after RNN")
 
         after_lstm = self.cls_head(x)
-        if after_lstm.isnan().any():
-            raise NanException(f"NaN after CLS head")
+        # if after_lstm.isnan().any():
+        #     raise NanException(f"NaN after CLS head")
 
         logits = torch.tensor(self.crf.decode(after_lstm))
     

@@ -116,3 +116,27 @@ class NERProblem(Problem):
         # result = trainer.test()
         print(self.chromsome_logger.logs[-1]["data"][-1])
         return self.chromsome_logger.logs[-1]["data"][-1]["metrics"][self.metric_name]
+
+class NERProblemMultiObj(NERProblem):
+    def evaluate(self, chromosome: np.array):
+        glue_pl, trainer = self.setup_model_trainer(chromosome)
+        self.lr_finder(
+            glue_pl, trainer, self.dm.train_dataloader(), self.dm.val_dataloader()
+        )
+        try:
+            trainer.fit(glue_pl, self.dm)
+        except NanException as e:
+            print(e)
+            log_data = {
+                f"val_loss": 0.0,
+                "metrics": {"accuracy": 0.0, "f1": 0.0},
+                "epoch": -1,
+            }
+            self.chromsome_logger.log_epoch(log_data)
+
+        # result = trainer.test()
+        print(self.chromsome_logger.logs[-1]["data"][-1])
+        return (
+            self.chromsome_logger.logs[-1]["data"][-1]["metrics"][self.metric_name],
+            NERProblem.total_params(glue_pl),
+        )

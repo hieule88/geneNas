@@ -62,7 +62,7 @@ class DataModule(pl.LightningDataModule):
         "imdb": ["imdb"],
         "trec": ["trec"],
         "twitter": ["tweet_eval", "sentiment"],
-        "ner" : ["conll2003"],
+        "ner" : 'conll2003',
         # "health_fact": ["health_fact"],
     }
 
@@ -120,7 +120,11 @@ class DataModule(pl.LightningDataModule):
 
     def setup(self, stage):
         if not self.cache_dataset:
-            self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
+            if self.task_name in ['ner']:
+                self.dataset = datasets.load_dataset('conll2003')
+                self.dataset['validation'] = datasets.load_dataset('conll2003', split='validation[:40%]')
+            else:
+                self.dataset = datasets.load_dataset(*self.dataset_names[self.task_name])
             if self.task_name in ['trec']:
                 self.dataset = self.tokenize_glove(self.dataset)   
 

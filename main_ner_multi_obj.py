@@ -45,7 +45,8 @@ def main():
     args = parse_args()
 
     # solve problems
-    problem = NERProblemMultiObj(args)
+    distribution = 'gaussian'
+    problem = NERProblemMultiObj(args, distribution=distribution)
     # problem.progress_bar = 10
     problem.weights_summary = "top"
 

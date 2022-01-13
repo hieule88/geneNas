@@ -1,3 +1,6 @@
 geneNas/
 lightning_logs/
 .idea
+archive.zip
+archive
+**/*.pyc

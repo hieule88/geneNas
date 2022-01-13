@@ -89,12 +89,12 @@ class LightningRecurrent_CLS(pl.LightningModule):
         
         x = self.embed(**inputs)
 
-        if x.isnan().any():
-            raise NanException(f"NaN after embeds")
+        # if x.isnan().any():
+        #     raise NanException(f"NaN after embeds")
         x, hiddens = self.recurrent_model(x, hiddens)
         x = self.rnn_dropout(x)
-        if x.isnan().any():
-            raise NanException(f"NaN after RNN")
+        # if x.isnan().any():
+        #     raise NanException(f"NaN after RNN")
 
         if self.hparams.batch_first:
             x = x[:, 0, :]  # CLS token
@@ -103,23 +103,17 @@ class LightningRecurrent_CLS(pl.LightningModule):
             
         logits = self.cls_head(x)
 
-        if logits.isnan().any():
-            raise NanException(f"NaN after CLS head")
+        # if logits.isnan().any():
+        #     raise NanException(f"NaN after CLS head")
 
         loss = None
-        print('LOGITS: ',logits)
-        print('LABELS: ',labels)
-        if labels is not None:
-            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
-            # labels = torch.Tensor(labels)
 
+        if labels is not None:
             if self.num_labels == 1:
-                #  We are doing regression
                 loss_fct = nn.MSELoss()
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
-                loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
-
+                loss_fct = nn.CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         return loss, logits, hiddens

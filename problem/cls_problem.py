@@ -144,7 +144,7 @@ class CLSProblemMultiObj(CLSProblem):
 
         trainer = self.setup_trainer()
         train_dataloader = DataLoader(self.dm.dataset['train'], batch_size= self.hparams.train_batch_size, shuffle= True, num_workers= self.hparams.num_workers)
-        val_dataloader = DataLoader(self.dm.dataset['validation'], batch_size= self.hparams.eval_batch_size, num_workers= self.hparams.num_workers)
+        val_dataloader = DataLoader(self.dm.dataset['test'], batch_size= self.hparams.eval_batch_size, num_workers= self.hparams.num_workers)
         # self.lr_finder(model, self.trainer, train_dataloader, val_dataloader)   
         trainer.fit(
             model, 

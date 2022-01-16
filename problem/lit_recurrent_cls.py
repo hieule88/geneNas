@@ -117,8 +117,8 @@ class LightningRecurrent_CLS(pl.LightningModule):
             else:
                 loss_fct = nn.CrossEntropyLoss()
                 print("Training:")
-                print(logits.view(-1, self.num_labels))
-                print(labels.view(-1))
+                print(logits.view(-1, self.num_labels).shape)
+                print(labels.view(-1).shape)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         return loss, logits, hiddens

@@ -119,7 +119,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
                 print("Training:")
                 print(logits.view(-1, self.num_labels).shape)
                 print(labels.view(-1).shape)
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1)) 
 
         return loss, logits, hiddens
 
@@ -167,6 +167,8 @@ class LightningRecurrent_CLS(pl.LightningModule):
 
         preds = torch.cat([x["preds"] for x in outputs]).detach().cpu().numpy()
         labels = torch.cat([x["labels"] for x in outputs]).detach().cpu().numpy()
+        print('Preds: ',preds)
+        print('Labels: ', labels)
         loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
         

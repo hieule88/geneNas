@@ -63,6 +63,8 @@ class LightningRecurrent_CLS(pl.LightningModule):
 
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None
+        self.callbacks = []
+        self.hidden_size = hidden_size
 
     def init_metric(self, metric):
         self.metric = metric
@@ -122,36 +124,9 @@ class LightningRecurrent_CLS(pl.LightningModule):
         loss, _, hiddens = self(hiddens, **batch)
         return {"loss": loss, "hiddens": hiddens}
 
-    def tbptt_split_batch(self, batch, split_size):
-        num_splits = None
-        split_dict = {}
-        for k, v in batch.items():
-            if k == "labels":
-                split_dict[k] = v
-                continue
-            else:
-                split_dict[k] = torch.split(
-                    v, split_size, int(self.hparams.batch_first)
-                )
-                assert (
-                    num_splits == len(split_dict[k]) or num_splits is None
-                ), "mismatched splits"
-                num_splits = len(split_dict[k])
-
-        new_batch = []
-        for i in range(num_splits):
-            batch_dict = {}
-            for k, v in split_dict.items():
-                if k == "labels":
-                    batch_dict[k] = v
-                else:
-                    batch_dict[k] = v[i]
-            new_batch.append(batch_dict)
-
-        return new_batch
-
     def validation_step(self, batch, batch_idx):
         val_loss, logits, _ = self(None, **batch)
+
         if self.hparams.num_labels >= 1:
             preds = torch.argmax(logits, dim=-1)
             # preds = logits
@@ -163,6 +138,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
+
         if self.num_val_dataloader > 1:
             for i, output in enumerate(outputs):
                 # matched or mismatched
@@ -190,15 +166,12 @@ class LightningRecurrent_CLS(pl.LightningModule):
         labels = torch.cat([x["labels"] for x in outputs]).detach().cpu().numpy()
         loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
-
-        if np.all(preds == preds[0]):
-            metrics = {self.metric.name: 0}
-        else:
-            metrics = {}
-            metrics['accuracy'] = accuracy_score(labels, preds)
-            metrics['f1'] = f1_score(labels, preds, average='macro')
-            metrics['recall'] = recall_score(labels, preds, average='macro')
-            metrics['precision'] = precision_score(labels, preds, average='macro')
+        
+        metrics = {}
+        metrics['accuracy'] = accuracy_score(labels, preds)
+        metrics['f1'] = f1_score(labels, preds, average='macro')
+        metrics['recall'] = recall_score(labels, preds, average='macro')
+        metrics['precision'] = precision_score(labels, preds, average='macro')
 
         self.log_dict(metrics, prog_bar=True)
         log_data = {
@@ -206,7 +179,15 @@ class LightningRecurrent_CLS(pl.LightningModule):
             "metrics": metrics,
             "epoch": self.current_epoch,
         }
-        self.chromosome_logger.log_epoch(log_data)
+        # NEED IF ELSE FOR TRAIN OR SEARCH
+        try :
+            self.chromosome_logger.log_epoch(log_data)
+        except:
+            pass
+        callbacks = metrics
+        callbacks['val_loss'] = loss.item()
+        self.callbacks.append(callbacks)
+        print(f'epoch: {self.current_epoch}, val_loss: {loss}, accuracy: {metrics} ')
         return
 
     def test_step(self, batch, batch_idx):
@@ -339,7 +320,7 @@ class ClsHead(nn.Module):
 
 class SimpleClsHead(nn.Module):
 
-    def __init__(self, hidden_size, dropout, num_labels):
+    def __init__(self, hidden_size, num_labels):
         super().__init__()
         self.dense = nn.Linear(hidden_size * 2, num_labels)
 

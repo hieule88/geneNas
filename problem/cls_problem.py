@@ -3,7 +3,6 @@ import time
 import numpy as np
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-from transformers import AutoModel, AutoConfig
 import torch
 import torch.nn as nn
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
@@ -11,13 +10,14 @@ from .abstract_problem import Problem
 from .function_set import NLPFunctionSet
 from .data_module import DataModule
 from .lit_recurrent_cls import LightningRecurrent_CLS
+from torch.utils.data import DataLoader
 
 from network import RecurrentNet
 from util.logger import ChromosomeLogger
 from util.exception import NanException
 
-from typing import List, Tuple
-from evolution import GeneType
+import matplotlib.pyplot as plt
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
@@ -35,6 +35,7 @@ class CLSProblem(Problem):
         self.progress_bar = 0
         self.weights_summary = None
         self.early_stop = None
+        self.baseline = False
 
     def parse_chromosome(
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False
@@ -80,14 +81,14 @@ class CLSProblem(Problem):
             weights_summary=self.weights_summary,
             checkpoint_callback=False,
             callbacks=early_stop,
-            limit_train_batches=0, 
-            limit_val_batches=0,
+            max_epochs = self.hparams.max_epochs,
         )
         return trainer
 
     def setup_model(self, chromosome):
-        self.chromsome_logger.log_chromosome(chromosome)
-        mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
+        if not self.baseline:
+            self.chromsome_logger.log_chromosome(chromosome)
+            mains, adfs = self.parse_chromosome(chromosome, return_adf=True)
 
         glue_pl = LightningRecurrent_CLS(
             max_sequence_length= self.dm.max_seq_length,
@@ -97,8 +98,14 @@ class CLSProblem(Problem):
             **vars(self.hparams),
         )
         glue_pl.init_metric(self.dm.metric)
-        glue_pl.init_model(mains, adfs)
-        glue_pl.init_chromosome_logger(self.chromsome_logger)
+        if not self.baseline:
+            print('RNN searched Training:')
+            glue_pl.init_model(mains, adfs)
+            glue_pl.init_chromosome_logger(self.chromsome_logger)
+        else: 
+            print('Baseline Trainning:')
+            recurrent_model = torch.nn.LSTM(input_size = glue_pl.embed.embed_dim,hidden_size= glue_pl.hidden_size, bidirectional=glue_pl.hparams.bidirection)
+            glue_pl.add_module("recurrent_model", recurrent_model)
         return glue_pl
 
     def evaluate(self, chromosome: np.array):
@@ -132,6 +139,29 @@ class CLSProblemMultiObj(CLSProblem):
             for name, param in model.named_parameters():
                 new_param = sampler.sample(param.shape)
                 param.copy_(new_param)
+
+    def train(self, model):
+
+        trainer = self.setup_trainer()
+        train_dataloader = DataLoader(self.dm.dataset['train'], batch_size= self.hparams.train_batch_size, shuffle= True, num_workers= self.hparams.num_workers)
+        val_dataloader = DataLoader(self.dm.dataset['validation'], batch_size= self.hparams.eval_batch_size, num_workers= self.hparams.num_workers)
+        # self.lr_finder(model, self.trainer, train_dataloader, val_dataloader)   
+        trainer.fit(
+            model, 
+            train_dataloaders= train_dataloader,
+            val_dataloaders= val_dataloader,
+        )
+        num_epoch = len(model.callbacks)
+        fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize= (21, 7), dpi=120)
+        ax1.plot([i for i in range(1, num_epoch+1)], [i['accuracy'] for i in model.callbacks], color= 'g')
+        ax2.plot([i for i in range(1, num_epoch+1)], [i['f1'] for i in model.callbacks], color= 'b')
+        ax3.plot([i for i in range(1, num_epoch+1)], [i['val_loss'] for i in model.callbacks], color= 'r')
+
+        ax1.set(title='Accuracy', xlabel='Epochs', ylabel='Accuracy')
+        ax2.set(title='F1', xlabel='Epochs', ylabel='F1')
+        ax3.set(title='Val Loss', xlabel='Epochs', ylabel='Loss')
+
+        plt.show()
 
     def run_inference(self, model, weight_value, val_dataloader):
         self.apply_weight(model, weight_value)
@@ -201,9 +231,16 @@ class CLSProblemMultiObj(CLSProblem):
         )
         return avg_metrics, avg_max_metrics
 
-    def evaluate(self, chromosome: np.array):
-        symbols, _, _ = self.replace_value_with_symbol(chromosome)
-        print(f"CHROMOSOME: {symbols}")
+    def evaluate(self, chromosome = False, for_train = False):
+        if not self.baseline:
+            print(chromosome)
+            symbols, _, _ = self.replace_value_with_symbol(chromosome)
+            print(f"CHROMOSOME: {symbols}")
+            print('Set up model')
         RNN_model = self.setup_model(chromosome)
-        avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
-        return avg_metrics, avg_max_metrics, CLSProblemMultiObj.total_params(RNN_model)
+        if not for_train:
+            avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
+            return avg_metrics, avg_max_metrics, CLSProblemMultiObj.total_params(RNN_model)
+        else:
+            self.train(RNN_model)
+            RNN_model.trainer.save_checkpoint(self.save_path)

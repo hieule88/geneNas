@@ -128,13 +128,14 @@ class LightningRecurrent_CLS(pl.LightningModule):
         val_loss, logits, _ = self(None, **batch)
 
         if self.hparams.num_labels >= 1:
+            print('LOGITS: ', logits)
             preds = torch.argmax(logits, dim=-1)
             # preds = logits
         elif self.hparams.num_labels == 1:
             preds = logits.squeeze()
 
         labels = batch["labels"]
-                
+        print('LABELS: ', labels)
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
@@ -164,8 +165,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
 
         preds = torch.cat([x["preds"] for x in outputs]).detach().cpu().numpy()
         labels = torch.cat([x["labels"] for x in outputs]).detach().cpu().numpy()
-        print('Preds: ',preds)
-        print('Labels: ', labels)
+
         loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
         

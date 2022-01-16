@@ -18,7 +18,7 @@ import os
 from pytorch_forecasting.models.temporal_fusion_transformer.sub_modules import TimeDistributed
 
 from torchcrf import CRF
-from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score 
 import warnings
 warnings.filterwarnings("ignore")
 class LightningRecurrent_CLS(pl.LightningModule):
@@ -116,9 +116,6 @@ class LightningRecurrent_CLS(pl.LightningModule):
                 loss = loss_fct(logits.view(-1), labels.view(-1))
             else:
                 loss_fct = nn.CrossEntropyLoss()
-                print("Training:")
-                print(logits.view(-1, self.num_labels).shape)
-                print(labels.view(-1).shape)
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1)) 
 
         return loss, logits, hiddens
@@ -184,11 +181,12 @@ class LightningRecurrent_CLS(pl.LightningModule):
             "metrics": metrics,
             "epoch": self.current_epoch,
         }
-        # NEED IF ELSE FOR TRAIN OR SEARCH
+        
         try :
             self.chromosome_logger.log_epoch(log_data)
         except:
             pass
+
         callbacks = metrics
         callbacks['val_loss'] = loss.item()
         self.callbacks.append(callbacks)

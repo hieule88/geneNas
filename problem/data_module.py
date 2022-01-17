@@ -220,7 +220,7 @@ class DataModule(pl.LightningDataModule):
                 tokens_clean = []
 
                 for word in tokens: # Go through every word in your tokens list
-                    if (word not in string.punctuation):  # remove punctuation
+                    if (word not in string.punctuation and word not in stopwords_english):  # remove punctuation
                         tokens_clean.append(word)
 
                 dataset_clean.append(tokens_clean)

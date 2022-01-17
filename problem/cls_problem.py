@@ -242,7 +242,7 @@ class CLSProblemMultiObj(CLSProblem):
         RNN_model = self.setup_model(chromosome)
         if not for_train:
             avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
-            return avg_metrics, avg_max_metrics, CLSProblemMultiObj.total_params(RNN_model)
+            return avg_metrics, avg_max_metrics
         else:
             self.train(RNN_model)
             RNN_model.trainer.save_checkpoint(self.save_path)

@@ -282,7 +282,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
     @staticmethod
     def add_learning_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument("--learning_rate", default=2e-5, type=float)
+        parser.add_argument("--learning_rate", default=2e-3, type=float)
         parser.add_argument("--epsilon", default=1e-8, type=float)
         parser.add_argument("--warmup_steps", default=0, type=int)
         parser.add_argument("--weight_decay", default=0.0, type=float)

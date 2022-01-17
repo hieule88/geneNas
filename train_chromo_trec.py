@@ -65,7 +65,8 @@ def main():
     chromosome = input_chromosome(args)
     problem = CLSProblemMultiObj(args= args)
     # problem.early_stop = 10
-    problem.evaluate(chromosome= chromosome, for_train= True)    
+    problem.for_train = True
+    problem.evaluate(chromosome= chromosome)    
 
 if __name__ == "__main__":
     main()

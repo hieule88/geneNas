@@ -36,6 +36,7 @@ class CLSProblem(Problem):
         self.weights_summary = None
         self.early_stop = None
         self.baseline = False
+        self.for_train = False
 
     def parse_chromosome(
         self, chromosome: np.array, function_set=NLPFunctionSet, return_adf=False
@@ -74,15 +75,27 @@ class CLSProblem(Problem):
         else:
             early_stop = None
 
-        trainer = pl.Trainer.from_argparse_args(
-            self.hparams,
-            progress_bar_refresh_rate=self.progress_bar,
-            # automatic_optimization=False,
-            weights_summary=self.weights_summary,
-            checkpoint_callback=False,
-            callbacks=early_stop,
-            max_epochs = self.hparams.max_epochs,
-        )
+        if self.for_train:
+            trainer = pl.Trainer.from_argparse_args(
+                self.hparams,
+                progress_bar_refresh_rate=self.progress_bar,
+                # automatic_optimization=False,
+                weights_summary=self.weights_summary,
+                checkpoint_callback=False,
+                callbacks=early_stop,
+                max_epochs = self.hparams.max_epochs,
+            )
+        else:
+            trainer = pl.Trainer.from_argparse_args(
+                self.hparams,
+                progress_bar_refresh_rate=self.progress_bar,
+                # automatic_optimization=False,
+                weights_summary=self.weights_summary,
+                checkpoint_callback=False,
+                callbacks=early_stop,
+                limit_train_batches=0, 
+                limit_val_batches=0,
+            )
         return trainer
 
     def setup_model(self, chromosome):
@@ -233,14 +246,14 @@ class CLSProblemMultiObj(CLSProblem):
         )
         return avg_metrics, avg_max_metrics
 
-    def evaluate(self, chromosome = False, for_train = False):
+    def evaluate(self, chromosome = False):
         if not self.baseline:
             print(chromosome)
             symbols, _, _ = self.replace_value_with_symbol(chromosome)
             print(f"CHROMOSOME: {symbols}")
             print('Set up model')
         RNN_model = self.setup_model(chromosome)
-        if not for_train:
+        if not self.for_train:
             avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
             return avg_metrics, avg_max_metrics
         else:

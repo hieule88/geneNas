@@ -169,11 +169,14 @@ class LightningRecurrent_CLS(pl.LightningModule):
         loss = torch.stack([x["loss"] for x in outputs]).mean()
         self.log("val_loss", loss, prog_bar=True)
         
-        metrics = {}
-        metrics['accuracy'] = accuracy_score(labels, preds)
-        metrics['f1'] = f1_score(labels, preds, average='macro')
-        metrics['recall'] = recall_score(labels, preds, average='macro')
-        metrics['precision'] = precision_score(labels, preds, average='macro')
+        if np.all(preds == preds[0]):
+            metrics = {self.metric.name: 0}
+        else:
+            metrics = {}
+            metrics['accuracy'] = accuracy_score(labels, preds)
+            metrics['f1'] = f1_score(labels, preds, average='macro')
+            metrics['recall'] = recall_score(labels, preds, average='macro')
+            metrics['precision'] = precision_score(labels, preds, average='macro')
 
         self.log_dict(metrics, prog_bar=True)
         log_data = {

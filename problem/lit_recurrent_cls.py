@@ -30,7 +30,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
-        learning_rate: float = 2e-5,
+        learning_rate: float = 2e-3,
         epsilon: float = 1e-8,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
@@ -123,6 +123,34 @@ class LightningRecurrent_CLS(pl.LightningModule):
     def training_step(self, batch, batch_idx, hiddens=None):
         loss, _, hiddens = self(hiddens, **batch)
         return {"loss": loss, "hiddens": hiddens}
+    
+    def tbptt_split_batch(self, batch, split_size):
+        num_splits = None
+        split_dict = {}
+        for k, v in batch.items():
+            if k == "labels":
+                split_dict[k] = v
+                continue
+            else:
+                split_dict[k] = torch.split(
+                    v, split_size, int(self.hparams.batch_first)
+                )
+                assert (
+                    num_splits == len(split_dict[k]) or num_splits is None
+                ), "mismatched splits"
+                num_splits = len(split_dict[k])
+
+        new_batch = []
+        for i in range(num_splits):
+            batch_dict = {}
+            for k, v in split_dict.items():
+                if k == "labels":
+                    batch_dict[k] = v
+                else:
+                    batch_dict[k] = v[i]
+            new_batch.append(batch_dict)
+
+        return new_batch
 
     def validation_step(self, batch, batch_idx):
         val_loss, logits, _ = self(None, **batch)
@@ -139,7 +167,6 @@ class LightningRecurrent_CLS(pl.LightningModule):
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
-
         if self.num_val_dataloader > 1:
             for i, output in enumerate(outputs):
                 # matched or mismatched

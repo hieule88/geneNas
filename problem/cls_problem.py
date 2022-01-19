@@ -121,10 +121,17 @@ class CLSProblem(Problem):
         return self.chromsome_logger.logs[-1]["data"][-1]["metrics"][self.metric_name]
 
 class CLSProblemMultiObj(CLSProblem):
-    def __init__(self, args):
+    def __init__(self, args, distribution='uniform'):
         super().__init__(args)
         self.k_folds = self.hparams.k_folds
-        self.weight_values = [0.5, 1, 2, 3]
+        self.distribution = distribution
+        if self.distribution == 'uniform':
+            self.weight_values = [0.5, 1, 2, 3]
+        elif self.distribution == 'gaussian':
+            self.weight_values = [[0, 0.25],
+                                  [0, 0.5],
+                                  [0, 0.75],
+                                  [0, 1.0]]
 
     def apply_weight(self, model, value):
         sampler = torch.distributions.uniform.Uniform(low=-value, high=value)
@@ -133,9 +140,23 @@ class CLSProblemMultiObj(CLSProblem):
                 new_param = sampler.sample(param.shape)
                 param.copy_(new_param)
 
+    @staticmethod
+    def apply_gaussian_weight(model, weight_value):
+        sampler = torch.distributions.Normal(loc=weight_value[0], scale=weight_value[1])
+        with torch.no_grad():
+            for name, param in model.named_parameters():
+                new_param = sampler.sample(param.shape)
+                param.copy_(new_param)
+        return
+
     def run_inference(self, model, weight_value, val_dataloader):
-        self.apply_weight(model, weight_value)
-        
+        # self.apply_weight(model, weight_value)
+
+        if self.distribution == 'uniform':
+            self.apply_weight(model, weight_value)
+        elif self.distribution == 'gaussian':
+            self.apply_gaussian_weight(model, weight_value)
+
         outputs = []
         encounter_nan = False
         for batch in val_dataloader:

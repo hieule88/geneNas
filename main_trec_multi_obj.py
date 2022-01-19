@@ -45,7 +45,7 @@ def main():
     args = parse_args()
 
     # solve problems
-    problem = CLSProblemMultiObj(args)
+    problem = CLSProblemMultiObj(args, distribution='gaussian')
     # problem.progress_bar = 10
     problem.weights_summary = "top"
 

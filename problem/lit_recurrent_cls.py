@@ -43,7 +43,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
         **kwargs,
     ):
         super().__init__()
-
+        
         self.save_hyperparameters()
         self.max_sequence_length = max_sequence_length
         self.num_labels = num_labels
@@ -156,14 +156,12 @@ class LightningRecurrent_CLS(pl.LightningModule):
         val_loss, logits, _ = self(None, **batch)
 
         if self.hparams.num_labels >= 1:
-            print('LOGITS: ', logits)
             preds = torch.argmax(logits, dim=-1)
             # preds = logits
         elif self.hparams.num_labels == 1:
             preds = logits.squeeze()
 
         labels = batch["labels"]
-        print('LABELS: ', labels)
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):
@@ -211,7 +209,7 @@ class LightningRecurrent_CLS(pl.LightningModule):
             "metrics": metrics,
             "epoch": self.current_epoch,
         }
-        
+
         try :
             self.chromosome_logger.log_epoch(log_data)
         except:

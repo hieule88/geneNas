@@ -299,7 +299,7 @@ class DataModule(pl.LightningDataModule):
             # Rename label to labels to make it easier to pass to model forward
             for label_index in range(len(features["labels"])):
                 tmp_label = [-2 for i in range(self.max_seq_length + 1)]
-                tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index] 
+                tmp_label[:len(features["labels"][label_index])] = features["labels"][label_index]
                 tmp_label[self.max_seq_length] = len(features["labels"][label_index])
                 features["labels"][label_index] = tmp_label
             # features["labels"] = to_categorical(array(features["labels"]), num_classes= self.num_labels)

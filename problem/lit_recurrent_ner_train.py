@@ -87,7 +87,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         labels = None
         if "labels" in inputs:
             labels = inputs.pop("labels")[:,:self.max_sequence_length]
-        
+
         x = self.embed(**inputs)
 
         # if x.isnan().any():
@@ -97,34 +97,35 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         # if x.isnan().any():
         #     raise NanException(f"NaN after RNN")
 
-        after_lstm = self.cls_head(x)
+        logits = self.cls_head(x)
         # print('X after CLS: ',logits)
         
         # if logits.isnan().any():
         #     raise NanException(f"NaN after CLS head")
 
-        logits = torch.Tensor(self.crf.decode(after_lstm))
-        mask = torch.tensor([[1 if labels[j][i] != -2 else 0 \
-                                for i in range(len(labels[j]))] \
-                                for j in range(len(labels))], dtype=torch.uint8).cuda()
+        # logits = torch.Tensor(self.crf.decode(after_lstm))
+        # mask = torch.tensor([[1 if labels[j][i] != -2 else 0 \
+        #                         for i in range(len(labels[j]))] \
+        #                         for j in range(len(labels))], dtype=torch.uint8).cuda()
 
-        loss = (-1.0)*self.crf(after_lstm, labels, mask=mask, reduction='mean')
-        # loss = None
-        # if labels is not None:
-        #     # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
-        #     # labels = torch.Tensor(labels)
+        # loss = (-1.0)*self.crf(after_lstm, labels, mask=mask, reduction='mean')
+        
+        loss = None
+        if labels is not None:
+            # labels = nn.functional.one_hot(labels.to(torch.int64),self.num_labels).to(torch.float32)
+            # labels = torch.Tensor(labels)
 
-        #     if self.num_labels == 1:
-        #         #  We are doing regression
-        #         loss_fct = nn.MSELoss()
-        #         loss = loss_fct(logits.view(-1), labels.view(-1))
-        #     else:
-        #         loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
+            if self.num_labels == 1:
+                #  We are doing regression
+                loss_fct = nn.MSELoss()
+                loss = loss_fct(logits.view(-1), labels.view(-1))
+            else:
+                loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
-        #         loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1])),\
-        #                         labels.reshape((labels.shape[0]*labels.shape[1])))
-        #         # loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
-                #                 labels.reshape((labels.shape[0]*labels.shape[1])))
+                loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1])),\
+                                labels.reshape((labels.shape[0]*labels.shape[1])))
+                loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
+                                labels.reshape((labels.shape[0]*labels.shape[1])))
 
 
         return loss, logits, hiddens
@@ -228,7 +229,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         embed = self.embed
         model = self.recurrent_model
         fc = self.cls_head
-        crf = self.crf
+        # crf = self.crf
         no_decay = ["bias", "LayerNorm.weight"]
         optimizer_grouped_parameters = [
             {
@@ -246,12 +247,12 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
                     p
                     for n, p in embed.named_parameters()
                     if not any(nd in n for nd in no_decay)
-                ]
-                + [
-                    p
-                    for n, p in crf.named_parameters()
-                    if not any(nd in n for nd in no_decay)
                 ],
+                # + [
+                #     p
+                #     for n, p in crf.named_parameters()
+                #     if not any(nd in n for nd in no_decay)
+                # ],
                 "weight_decay": self.hparams.weight_decay,
             },
             {
@@ -269,12 +270,12 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
                     p
                     for n, p in embed.named_parameters()
                     if any(nd in n for nd in no_decay)
-                ]
-                + [
-                    p
-                    for n, p in crf.named_parameters()
-                    if any(nd in n for nd in no_decay)
                 ],
+                # + [
+                #     p
+                #     for n, p in crf.named_parameters()
+                #     if any(nd in n for nd in no_decay)
+                # ],
                 "weight_decay": 0.0,
             },
         ]

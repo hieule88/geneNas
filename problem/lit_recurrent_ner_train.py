@@ -56,8 +56,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
 
         self.rnn_dropout = nn.Dropout(p=dropout)
 
-        # self.cls_head = ClsHead(hidden_size, dropout, num_labels)
-        self.cls_head = SimpleClsHead(hidden_size,num_labels)
+        self.cls_head = ClsHead(hidden_size, dropout, num_labels)
+        # self.cls_head = SimpleClsHead(hidden_size,num_labels)
 
         self.chromosome_logger: Optional[ChromosomeLogger] = None
         self.metric = None

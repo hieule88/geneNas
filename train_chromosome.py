@@ -59,13 +59,12 @@ def parse_args():
 
     return args
 
-        
 def main():
     args = parse_args()
     chromosome = input_chromosome(args)
     problem = NERProblemTrain(args= args)
     # problem.early_stop = 10
-    problem.evaluate(chromosome= chromosome)    
+    problem.evaluate(chromosome= chromosome)
 
 if __name__ == "__main__":
     main()

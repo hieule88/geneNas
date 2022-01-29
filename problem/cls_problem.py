@@ -244,7 +244,7 @@ class CLSProblemMultiObj(CLSProblem):
         print(
             f"FOLD AVG: {self.metric_name} {avg_metrics} {avg_max_metrics} ; Time {total_time}"
         )
-        return avg_metrics, avg_max_metrics
+        return avg_metrics
 
     def evaluate(self, chromosome = False):
         if not self.baseline:
@@ -254,8 +254,8 @@ class CLSProblemMultiObj(CLSProblem):
             print('Set up model')
         RNN_model = self.setup_model(chromosome)
         if not self.for_train:
-            avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
-            return avg_metrics, avg_max_metrics
+            avg_metrics = self.perform_kfold(RNN_model)
+            return avg_metrics
         else:
             self.train(RNN_model)
             RNN_model.trainer.save_checkpoint(self.save_path)

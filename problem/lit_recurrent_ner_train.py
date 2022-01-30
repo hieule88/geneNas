@@ -183,9 +183,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         preds = [i for j in range(len(preds)) for i in preds[j][:labels[j][-1]] ]
         labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
-        print(labels)
         print(len(labels))
-        print(preds)
         print(len(preds))
         print(len(preds[0]))
         metrics = {}

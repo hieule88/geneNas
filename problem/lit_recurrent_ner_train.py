@@ -122,8 +122,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             else:
                 loss_fct = nn.CrossEntropyLoss(ignore_index= -2)
 
-                loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1])),\
-                                labels.reshape((labels.shape[0]*labels.shape[1])))
+                # loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1])),\
+                                # labels.reshape((labels.shape[0]*labels.shape[1])))
                 loss = loss_fct(logits.reshape((logits.shape[0]*logits.shape[1], logits.shape[2])),\
                                 labels.reshape((labels.shape[0]*labels.shape[1])))
 

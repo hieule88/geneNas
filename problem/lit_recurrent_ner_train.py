@@ -184,9 +184,10 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
         print(labels)
-        print(labels.shape)
+        print(len(labels))
         print(preds)
-        print(preds.shape)
+        print(len(preds))
+        print(len(preds[0]))
         metrics = {}
         metrics['accuracy'] = accuracy_score(labels, preds)
         metrics['f1'] = f1_score(labels, preds, average='macro')

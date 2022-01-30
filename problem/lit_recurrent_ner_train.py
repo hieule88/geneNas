@@ -138,8 +138,8 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         val_loss, logits, _ = self(None, **batch)
 
         if self.hparams.num_labels >= 1:
-            # preds = torch.argmax(logits, dim=-1)
-            preds = logits
+            preds = torch.argmax(logits, dim=-1)
+            # preds = logits
         elif self.hparams.num_labels == 1:
             preds = logits.squeeze()
 
@@ -183,9 +183,6 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         preds = [i for j in range(len(preds)) for i in preds[j][:labels[j][-1]] ]
         labels = [i for j in range(len(labels)) for i in labels[j][:labels[j][-1]] ]
 
-        print(len(labels))
-        print(len(preds))
-        print(len(preds[0]))
         metrics = {}
         metrics['accuracy'] = accuracy_score(labels, preds)
         metrics['f1'] = f1_score(labels, preds, average='macro')

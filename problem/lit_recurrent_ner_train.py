@@ -30,7 +30,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
-        learning_rate: float = 2e-5,
+        learning_rate: float = 2e-3,
         epsilon: float = 1e-8,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
@@ -144,7 +144,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
             preds = logits.squeeze()
 
         labels = batch["labels"]
-                
+
         return {"loss": val_loss, "preds": preds, "labels": labels}
 
     def validation_epoch_end(self, outputs):

@@ -1,3 +1,10 @@
-from json import load
-from datasets import load_dataset
-conll2003 = load_dataset('conll2003')
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--baseline", action='store_true')
+
+args = parser.parse_args()
+
+print(args.baseline)
+

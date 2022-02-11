@@ -44,6 +44,7 @@ def parse_args():
     parser.add_argument("--save_path", default = path + f"chromosome_trained_weights.gene_nas.{today}.pkl", type= str)
     parser = LightningRecurrent_NERTrain.add_model_specific_args(parser)
     parser = LightningRecurrent_NERTrain.add_learning_specific_args(parser)
+    parser.add_argument("--baseline", action='store_true')
     args = parser.parse_args()
 
     args.num_terminal = args.num_main + 1
@@ -64,6 +65,7 @@ def main():
     chromosome = input_chromosome(args)
     problem = NERProblemTrain(args= args)
     # problem.early_stop = 10
+    problem.baseline = args.baseline
     problem.evaluate(chromosome= chromosome)
 
 if __name__ == "__main__":

@@ -254,6 +254,8 @@ class CLSProblemMultiObj(CLSProblem):
             print(f"CHROMOSOME: {symbols}")
             print('Set up model')
         RNN_model = self.setup_model(chromosome)
+        print('TOTAL PRAMS:')
+        print(self.total_params(RNN_model))
         if not self.for_train:
             avg_metrics, avg_max_metrics = self.perform_kfold(RNN_model)
             if self.single_obj :

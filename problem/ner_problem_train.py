@@ -143,7 +143,8 @@ class NERProblemTrain(Problem):
             print(f"CHROMOSOME: {symbols}")
             print('Set up model')
         glue_pl = self.setup_model(chromosome)
-
+        print('TOTAL PRAMS:')
+        print(self.total_params(glue_pl))
         self.train(glue_pl)
         
         glue_pl.trainer.save_checkpoint(self.save_path)

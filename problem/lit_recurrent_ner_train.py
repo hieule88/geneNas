@@ -30,7 +30,7 @@ class LightningRecurrent_NERTrain(pl.LightningModule):
         num_labels: int,
         hidden_size: int = 128,
         dropout: float = 0.1,
-        learning_rate: float = 2e-3,
+        learning_rate: float = 2e-5,
         epsilon: float = 1e-8,
         warmup_steps: int = 0,
         weight_decay: float = 0.0,
